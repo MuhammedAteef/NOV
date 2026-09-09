@@ -1,0 +1,395 @@
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+@{
+    var currentPath = Context.Request.Path.Value ?? "";
+    bool isAdmin = User.IsInRole("Admin");
+
+    // Dynamic Breadcrumb generation logic
+    string pageTitle = ViewData["Title"]?.ToString() ?? "Dashboard";
+    string categoryName = "Home";
+    if (currentPath.Contains("/Products") || currentPath.Contains("/Categories") || currentPath.Contains("/StockHistory"))
+    {
+        categoryName = "Inventory";
+    }
+    else if (currentPath.Contains("/SalesInvoices") || currentPath.Contains("/SalesInvoiceItems") ||
+currentPath.Contains("/Customers"))
+    {
+        categoryName = "Sales";
+    }
+    else if (currentPath.Contains("/PurchaseInvoices") || currentPath.Contains("/PurchaseInvoiceItems") ||
+currentPath.Contains("/Suppliers"))
+    {
+        categoryName = "Purchases";
+    }
+    else if (currentPath.Contains("/Payments"))
+    {
+        categoryName = "Finance";
+    }
+    else if (currentPath.Contains("/Account"))
+    {
+        categoryName = "Account";
+    }
+}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - NOVERP</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/SystemManagementSystem.styles.css" asp-append-version="true" />
+</head>
+
+<body>
+
+    <!-- ── 1. TOP HEADER BAR ── -->
+    <header class="top-header px-3 px-lg-4 d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-3">
+            <!-- Mobile Sidebar Toggle -->
+            <button class="btn btn-light btn-sm d-lg-none rounded-3 border" type="button" id="sidebarMobileToggle">
+                <i class="bi bi-list fs-5"></i>
+            </button>
+
+            <!-- Gradient Logo -->
+            <a class="text-decoration-none d-flex align-items-center gap-2" asp-page="/Index">
+                <div class="logo-brand-icon">
+                    <i class="bi bi-layers-fill"></i>
+                </div>
+                <div>
+                    <div class="fw-bold text-dark lh-1" style="font-size: 1.05rem;">NOV</div>
+                    <small class="text-muted fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.05em;">ERP
+                        SYSTEM</small>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Global Search Bar -->
+            <div class="global-search-container d-none d-md-block">
+                <i class="bi bi-search search-icon-inside"></i>
+                <input type="text" class="form-control form-control-sm global-search-input"
+                       placeholder="Search products, invoices, customers..." id="globalSearchInput" />
+                <span class="search-shortcut-badge">Ctrl K</span>
+            </div>
+
+            <!-- Top Right Actions & User Profile -->
+            <div class="d-flex align-items-center gap-2 gap-md-3">
+
+                @if (User.Identity != null && User.Identity.IsAuthenticated)
+                {
+                    <!-- Quick Actions Dropdown -->
+                    <div class="dropdown">
+                        <button
+                            class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold d-flex align-items-center gap-1 dropdown-toggle"
+                            type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-plus-lg"></i>
+                            <span class="d-none d-sm-inline">Quick Action</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 mt-2">
+                            <li>
+                                <a class="dropdown-item py-2 d-flex align-items-center gap-2" asp-page="/SalesInvoices/Create">
+                                    <i class="bi bi-bag-plus text-success fs-6"></i>
+                                    <div>
+                                        <div class="fw-semibold small">New Sale Invoice</div>
+                                        <small class="text-muted">Create customer invoice</small>
+                                    </div>
+                                </a>
+                            </li>
+                            @if (isAdmin)
+                            {
+                                <li>
+                                    <a class="dropdown-item py-2 d-flex align-items-center gap-2"
+                                       asp-page="/PurchaseInvoices/Create">
+                                        <i class="bi bi-cart-plus text-primary fs-6"></i>
+                                        <div>
+                                            <div class="fw-semibold small">New Purchase Invoice</div>
+                                            <small class="text-muted">Add inventory stock</small>
+                                        </div>
+                                    </a>
+                                </li>
+                            }
+                            <li>
+                                <hr class="dropdown-divider my-1">
+                            </li>
+                            <li>
+                                <a class="dropdown-item py-2 d-flex align-items-center gap-2" asp-page="/Products/Create">
+                                    <i class="bi bi-box-seam text-info fs-6"></i> Add New Product
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item py-2 d-flex align-items-center gap-2" asp-page="/Customers/Create">
+                                    <i class="bi bi-person-plus text-warning fs-6"></i> Add New Customer
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Notifications Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-light btn-sm rounded-circle p-2 position-relative border" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-bell fs-6 text-secondary"></i>
+                            <span
+                                class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
+                                <span class="visually-hidden">New notifications</span>
+                            </span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end notification-dropdown-menu mt-2 p-0">
+                            <div
+                                class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light rounded-top">
+                                <h6 class="fw-bold mb-0 text-dark">Notifications</h6>
+                                <span class="badge bg-primary rounded-pill">4 New</span>
+                            </div>
+                            <div class="list-group list-group-flush">
+                                <a href="#" class="notification-item">
+                                    <div class="bg-success-subtle text-success p-2 rounded-circle flex-shrink-0">
+                                        <i class="bi bi-bag-check fs-6"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold small">5 New Sales Orders</div>
+                                        <small class="text-muted">Sales department completed orders</small>
+                                    </div>
+                                </a>
+                                <a href="#" class="notification-item">
+                                    <div class="bg-warning-subtle text-warning p-2 rounded-circle flex-shrink-0">
+                                        <i class="bi bi-exclamation-triangle fs-6"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold small">Low Stock Alert (3 Products)</div>
+                                        <small class="text-muted">Stock falls below minimum threshold</small>
+                                    </div>
+                                </a>
+                                <a href="#" class="notification-item">
+                                    <div class="bg-info-subtle text-info p-2 rounded-circle flex-shrink-0">
+                                        <i class="bi bi-credit-card fs-6"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold small">Stripe Payment Received</div>
+                                        <small class="text-muted">$1,250.00 received from customer</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="p-2 text-center border-top bg-light rounded-bottom">
+                                <small class="text-primary fw-semibold cursor-pointer">Mark all as read</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-light btn-sm rounded-pill border px-2 py-1 d-flex align-items-center gap-2"
+                                type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold"
+                                 style="width:28px; height:28px; font-size:0.75rem;">
+                                @(User.Identity.Name?.Substring(0, 1).ToUpper() ?? "U")
+                            </div>
+                            <span class="fw-semibold small d-none d-md-inline text-dark">@User.Identity.Name</span>
+                            <i class="bi bi-chevron-down text-muted small"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 mt-2 p-2" style="width: 220px;">
+                            <li class="px-2 py-2 bg-light rounded-2 mb-2">
+                                <div class="fw-bold text-dark small">@User.Identity.Name</div>
+                                <small class="text-muted d-block">
+                                    @if (isAdmin)
+                                    {
+                                        <span
+                                        class="badge bg-danger-subtle text-danger border border-danger-subtle">Administrator</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle">Standard User</span>
+                                    }
+                                </small>
+                            </li>
+                            <li>
+                                <a class="dropdown-item py-1.5 rounded-2 d-flex align-items-center gap-2 small" href="#">
+                                    <i class="bi bi-person text-secondary"></i> My Profile
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item py-1.5 rounded-2 d-flex align-items-center gap-2 small" href="#">
+                                    <i class="bi bi-gear text-secondary"></i> Account Settings
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item py-1.5 rounded-2 d-flex align-items-center gap-2 small" href="#">
+                                    <i class="bi bi-key text-secondary"></i> Change Password
+                                </a>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider my-1">
+                            </li>
+                            <li>
+                                <form class="d-inline" asp-page="/Account/Logout" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit"
+                                            class="dropdown-item py-1.5 rounded-2 d-flex align-items-center gap-2 small text-danger fw-semibold">
+                                        <i class="bi bi-box-arrow-right"></i> Sign Out
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                }
+                else
+                {
+                    <a class="btn btn-outline-primary btn-sm rounded-pill px-3" asp-page="/Account/Login">Sign In</a>
+                    <a class="btn btn-primary btn-sm rounded-pill px-3 fw-bold" asp-page="/Account/Register">Register</a>
+                }
+            </div>
+        </header>
+
+        <!-- ── 2. MAIN APP LAYOUT (SIDEBAR + CONTENT) ── -->
+        <div class="app-wrapper">
+
+            <!-- Sidebar Navigation -->
+            <aside class="app-sidebar" id="appSidebar">
+                <div>
+                    <!-- Main Navigation Header -->
+                    <div class="sidebar-heading">Core Navigation</div>
+                    <nav class="nav flex-column">
+                        <a class="sidebar-nav-link @(currentPath == "/Dashboard" ? "active" : "")"
+                           asp-page="/Dashboard">
+                            <i class="bi bi-grid-1x2-fill"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </nav>
+
+                    <!-- Inventory Section -->
+                    <div class="sidebar-heading">Inventory & Catalog</div>
+                    <nav class="nav flex-column">
+                        <a class="sidebar-nav-link @(currentPath.Contains("/Products") ? "active" : "")"
+                           asp-page="/Products/Index">
+                            <i class="bi bi-box-seam"></i>
+                            <span>Products</span>
+                        </a>
+                        @if (isAdmin)
+                        {
+                            <a class="sidebar-nav-link @(currentPath.Contains("/Categories") ? "active" : "")"
+                               asp-page="/Categories/Index">
+                                <i class="bi bi-tags"></i>
+                                <span>Categories</span>
+                            </a>
+                            <a class="sidebar-nav-link @(currentPath.Contains("/StockHistory") ? "active" : "")"
+                               asp-page="/StockHistory/Index">
+                                <i class="bi bi-activity"></i>
+                                <span>Stock History</span>
+                            </a>
+                        }
+                    </nav>
+
+                    <!-- Sales & Customers Section -->
+                    <div class="sidebar-heading">Sales & Clients</div>
+                    <nav class="nav flex-column">
+                        <a class="sidebar-nav-link @(currentPath.Contains("/SalesInvoices") ? "active" : "")"
+                           asp-page="/SalesInvoices/Index">
+                            <i class="bi bi-cash-stack"></i>
+                            <span>Sales Invoices</span>
+                        </a>
+                        <a class="sidebar-nav-link @(currentPath.Contains("/Customers") ? "active" : "")"
+                           asp-page="/Customers/Index">
+                            <i class="bi bi-people"></i>
+                            <span>Customers</span>
+                        </a>
+                    </nav>
+
+                    <!-- Purchases Section (Admin Only) -->
+                    @if (isAdmin)
+                    {
+                        <div class="sidebar-heading">Purchases & Suppliers</div>
+                        <nav class="nav flex-column">
+                            <a class="sidebar-nav-link @(currentPath.Contains("/PurchaseInvoices") ? "active" : "")"
+                               asp-page="/PurchaseInvoices/Index">
+                                <i class="bi bi-cart-check"></i>
+                                <span>Purchase Invoices</span>
+                            </a>
+                            <a class="sidebar-nav-link @(currentPath.Contains("/Suppliers") ? "active" : "")"
+                               asp-page="/Suppliers/Index">
+                                <i class="bi bi-truck"></i>
+                                <span>Suppliers</span>
+                            </a>
+                        </nav>
+                    }
+
+                    <!-- System & Management (Admin Only) -->
+                    @if (isAdmin)
+                    {
+                        <div class="sidebar-heading">System & Admin</div>
+                        <nav class="nav flex-column">
+                            <a class="sidebar-nav-link" href="#">
+                                <i class="bi bi-graph-up-arrow"></i>
+                                <span>Reports</span>
+                            </a>
+                            <a class="sidebar-nav-link" href="#">
+                                <i class="bi bi-gear"></i>
+                                <span>Settings</span>
+                            </a>
+                        </nav>
+                    }
+                </div>
+
+                <!-- Sidebar Footer System Info -->
+                <div class="p-3 border-top border-secondary border-opacity-25 text-muted small">
+                    <div class="d-flex align-items-center justify-content-between text-secondary"
+                         style="font-size: 0.75rem;">
+                        <span>System Status</span>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">Online</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Page Content Area -->
+            <main class="app-main-content">
+
+                <!-- Dynamic Breadcrumb Navigation -->
+                <div class="breadcrumb-container">
+                    <a asp-page="/Dashboard"><i class="bi bi-house"></i> Dashboard</a>
+                    @if (categoryName != "Home")
+                    {
+                        <span class="breadcrumb-separator"><i class="bi bi-chevron-right"></i></span>
+                        <span>@categoryName</span>
+                    }
+                    @if (!string.IsNullOrEmpty(pageTitle) && pageTitle != "Dashboard")
+                    {
+                        <span class="breadcrumb-separator"><i class="bi bi-chevron-right"></i></span>
+                        <span class="fw-semibold text-dark">@pageTitle</span>
+                    }
+                </div>
+
+                <!-- Render Body -->
+                @RenderBody()
+            </main>
+        </div>
+
+        <!-- ── 3. APP FOOTER ── -->
+        <footer class="app-footer d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
+            <div>
+                <strong>NOVERP</strong> &bull; Version 1.0.0 &bull; Built with ASP.NET Core 9 &bull; Bootstrap 5
+            </div>
+            <div>
+                &copy; 2026 NOVERP . All rights reserved.
+            </div>
+        </footer>
+
+        <script src="~/lib/jquery/dist/jquery.min.js"></script>
+        <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="~/js/site.js" asp-append-version="true"></script>
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+            const sidebarToggle = document.getElementById("sidebarMobileToggle");
+            const appSidebar = document.getElementById("appSidebar");
+            if (sidebarToggle && appSidebar) {
+            sidebarToggle.addEventListener("click", function () {
+            appSidebar.classList.toggle("show");
+            });
+            }
+            });
+        </script>
+
+        @await RenderSectionAsync("Scripts", required: false)
+    </body>
+
+</html>

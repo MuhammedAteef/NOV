@@ -1,0 +1,181 @@
+@page "{id:int}"
+@model SystemManagementSystem.Pages.SalesInvoices.DeleteModel
+@{
+    ViewData["Title"] = "Sales Invoice Details";
+    bool isDeleted = Model.Invoice.IsDeleted;
+}
+
+<div class="container my-4" style="max-width: 900px;">
+    <!-- Navigation Back Link -->
+    <div class="mb-3">
+        <a asp-page="./Index" class="text-decoration-none text-secondary d-inline-flex align-items-center gap-1">
+            <i class="bi bi-arrow-left"></i> Back to Sales Invoices
+        </a>
+    </div>
+
+    <!-- Page Header -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-0">Sales Invoice Details</h2>
+            <p class="text-muted small mb-0">Review the invoice before confirming deletion.</p>
+        </div>
+        @if (isDeleted)
+        {
+            <span class="badge bg-danger fs-6 px-3 py-2 ms-auto">
+                <i class="bi bi-slash-circle me-1"></i> Deleted
+            </span>
+        }
+        else
+        {
+            <span class="badge bg-success fs-6 px-3 py-2 ms-auto">
+                <i class="bi bi-check-circle me-1"></i> Active
+            </span>
+        }
+    </div>
+
+    @if (isDeleted)
+    {
+        <div class="alert alert-warning d-flex align-items-center gap-2 mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+            <div>
+                This invoice was already deleted on
+                <strong>@Model.Invoice.DeletedAt?.ToString("yyyy-MM-dd HH:mm")</strong>.
+                Stock has already been restored and all line items are marked as unavailable.
+            </div>
+        </div>
+    }
+
+    <!-- ── INVOICE HEADER CARD ── -->
+    <div class="card shadow-sm border-0 rounded-3 mb-4">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0">
+                <i class="bi bi-file-earmark-text me-2 text-primary"></i>Invoice Details
+            </h5>
+            @if (isDeleted)
+            {
+                <span class="badge bg-danger">Unavailable</span>
+            }
+        </div>
+        <div class="card-body p-4 @(isDeleted ? "text-muted" : "")">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <p class="text-muted small mb-1 fw-semibold text-uppercase">Invoice ID</p>
+                    <p class="fw-bold fs-5 mb-0 @(isDeleted ? "text-decoration-line-through" : "")">
+                        #@Model.Invoice.SalesInvoiceId
+                    </p>
+                </div>
+                <div class="col-md-3">
+                    <p class="text-muted small mb-1 fw-semibold text-uppercase">Customer</p>
+                    <p class="fw-bold fs-5 mb-0">@Model.Invoice.Customer?.Name</p>
+                </div>
+                <div class="col-md-3">
+                    <p class="text-muted small mb-1 fw-semibold text-uppercase">Invoice Date</p>
+                    <p class="fw-bold fs-5 mb-0">@Model.Invoice.InvoiceDate.ToString("yyyy-MM-dd")</p>
+                </div>
+                @if (isDeleted)
+                {
+                    <div class="col-md-3">
+                        <p class="text-muted small mb-1 fw-semibold text-uppercase">Deleted At</p>
+                        <p class="fw-bold fs-5 mb-0 text-danger">
+                            @Model.Invoice.DeletedAt?.ToString("yyyy-MM-dd HH:mm")
+                        </p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- ── LINE ITEMS CARD ── -->
+    <div class="card shadow-sm border-0 rounded-3 mb-4">
+        <div class="card-header bg-white py-3 border-bottom">
+            <h5 class="fw-bold mb-0">
+                <i class="bi bi-list-ul me-2 text-primary"></i>Product Line Items
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4" style="min-width:220px;">Product</th>
+                            <th style="width:120px;">Quantity</th>
+                            <th style="width:150px;">Unit Price</th>
+                            <th style="width:150px;">Sub Total</th>
+                            <th style="width:130px;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.LineItems != null && Model.LineItems.Any())
+                        {
+                            @foreach (var item in Model.LineItems)
+                            {
+                                <tr class="@(item.IsDeleted ? "table-danger" : "")">
+                                    <td class="ps-4 fw-semibold @(item.IsDeleted ? "text-decoration-line-through text-muted" : "")">
+                                        @item.Product?.Name
+                                    </td>
+                                    <td class="@(item.IsDeleted ? "text-muted" : "")">@item.Quantity</td>
+                                    <td class="@(item.IsDeleted ? "text-muted" : "")">@item.UnitPrice.ToString("C")</td>
+                                    <td class="fw-semibold @(item.IsDeleted ? "text-muted" : "text-secondary")">
+                                        @((item.Quantity * item.UnitPrice).ToString("C"))
+                                    </td>
+                                    <td>
+                                        @if (item.IsDeleted)
+                                        {
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-slash-circle me-1"></i>Unavailable
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle me-1"></i>Available
+                                            </span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">No line items found.</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-light">
+                            <td colspan="3" class="text-end fw-bold pe-3 py-3">Total Amount:</td>
+                            <td class="fw-bold text-primary py-3">@Model.Invoice.TotalAmount.ToString("C")</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── ACTION BUTTONS ── -->
+    <div class="d-flex justify-content-end gap-2">
+        <a asp-page="./Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to List
+        </a>
+        @if (!isDeleted)
+        {
+            <form method="post" asp-route-id="@Model.Invoice.SalesInvoiceId" id="deleteForm">
+                <button type="button" class="btn btn-danger px-4" onclick="confirmDelete()">
+                    <i class="bi bi-trash me-1"></i> Confirm Delete
+                </button>
+            </form>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDelete() {
+            if (confirm('Are you sure you want to delete this invoice?\n\nThis will:\n• Mark the invoice and all its items as Unavailable\n• Restore stock quantities for all products\n• Log the restoration in Stock History\n\nThis action cannot be undone.')) {
+                document.getElementById('deleteForm').submit();
+            }
+        }
+    </script>
+}

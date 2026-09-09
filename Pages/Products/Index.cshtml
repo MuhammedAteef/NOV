@@ -1,0 +1,125 @@
+@page
+@model SystemManagementSystem.Pages.Products.IndexModel
+@{
+    ViewData["Title"] = "Products Catalog";
+}
+
+<div class="container-fluid px-0">
+    <!-- Header Row -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4 gap-3">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">Products Inventory</h3>
+            <p class="text-muted small mb-0">Manage product stock levels, cost pricing, and automated 30% selling prices.</p>
+        </div>
+        <div>
+            <a asp-page="Create" class="btn btn-primary rounded-pill px-3 shadow-sm d-inline-flex align-items-center gap-1">
+                <i class="bi bi-plus-lg"></i> Add New Product
+            </a>
+        </div>
+    </div>
+
+    <!-- Products Card (Rounded-4) -->
+    <div class="card rounded-4 border-0 shadow-sm">
+        <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+            <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-box-seam me-2 text-primary"></i>Product Items List</h5>
+            <span class="badge bg-primary-subtle text-primary fw-semibold px-3 py-1.5 rounded-pill">Total: @Model.allProducts.Count</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-muted small">
+                        <tr>
+                            <th class="ps-4" style="width: 60px;">Image</th>
+                            <th>Product Name</th>
+                            <th>Category</th>
+                            <th>Buying Price</th>
+                            <th>Selling Price</th>
+                            <th>Stock</th>
+                            <th>Status</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.allProducts != null && Model.allProducts.Any())
+                        {
+                            @foreach (var item in Model.allProducts)
+                            {
+                                <tr>
+                                    <!-- Image Avatar -->
+                                    <td class="ps-4">
+                                        <div class="bg-primary-subtle text-primary rounded-3 d-flex align-items-center justify-content-center fw-bold" style="width:38px; height:38px; font-size:1rem;">
+                                            <i class="bi bi-box"></i>
+                                        </div>
+                                    </td>
+
+                                    <!-- Product Name -->
+                                    <td>
+                                        <div class="fw-bold text-dark">@item.Name</div>
+                                    </td>
+
+                                    <!-- Category -->
+                                    <td>
+                                        <span class="badge bg-secondary-subtle text-dark border">
+                                            @(item.Category?.Name ?? "Uncategorized")
+                                        </span>
+                                    </td>
+
+                                    <!-- Buying Price -->
+                                    <td class="fw-semibold text-secondary">
+                                        $@item.PurchasePrice.ToString("N2")
+                                    </td>
+
+                                    <!-- Selling Price -->
+                                    <td class="fw-bold text-success">
+                                        $@item.SellingPrice.ToString("N2")
+                                    </td>
+
+                                    <!-- Stock -->
+                                    <td class="fw-bold text-dark">
+                                        @item.StockQuantity units
+                                    </td>
+
+                                    <!-- Status Badge -->
+                                    <td>
+                                        @if (item.StockQuantity == 0)
+                                        {
+                                            <span class="status-badge out-of-stock">🔴 Out of Stock</span>
+                                        }
+                                        else if (item.StockQuantity <= 10)
+                                        {
+                                            <span class="status-badge low-stock">🟡 Low Stock</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="status-badge in-stock">🟢 In Stock</span>
+                                        }
+                                    </td>
+
+                                    <!-- Compact Action Icon Buttons -->
+                                    <td class="text-end pe-4">
+                                        <div class="btn-action-group">
+                                            <a asp-page="./Edit" asp-route-id="@item.ProductId" class="btn-action btn-action-edit" title="Edit Product">
+                                                <i class="bi bi-pencil-fill"></i>
+                                            </a>
+                                            <a asp-page="./Delete" asp-route-id="@item.ProductId" class="btn-action btn-action-delete" title="Delete Product">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">
+                                    No products found in inventory.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

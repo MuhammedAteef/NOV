@@ -1,0 +1,51 @@
+## ── SECRETS & ENVIRONMENT ──────────────────────────────────────────────────
+# Never commit secrets, credentials, or connection strings
+.env
+.env.*
+!.env.example
+
+# User-specific appsettings overrides (may contain local secrets)
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json
+
+## ── .NET BUILD OUTPUTS ──────────────────────────────────────────────────────
+bin/
+obj/
+
+## ── VISUAL STUDIO ───────────────────────────────────────────────────────────
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vscode/
+
+## ── RIDER / JETBRAINS ───────────────────────────────────────────────────────
+.idea/
+*.DotSettings.user
+
+## ── NUGET ───────────────────────────────────────────────────────────────────
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## ── LOGS & TEMP ─────────────────────────────────────────────────────────────
+*.log
+*.tmp
+*.temp
+Logs/
+logs/
+
+## ── OS FILES ────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+## ── PUBLISH OUTPUT ──────────────────────────────────────────────────────────
+publish/
+**/publish/

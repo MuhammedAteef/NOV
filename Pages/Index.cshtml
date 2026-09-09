@@ -1,0 +1,264 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Welcome";
+    Layout = "_LandingLayout";
+}
+
+<!-- ── HERO SECTION ── -->
+<section class="landing-hero">
+    <div class="container-xl px-4">
+        <div class="row align-items-center g-5">
+
+            <!-- Left: Copy -->
+            <div class="col-lg-6">
+                <div class="hero-badge">
+                    <i class="bi bi-lightning-charge-fill"></i>
+                    Business Management, Simplified
+                </div>
+
+                <h1 class="hero-title mb-3">
+                    Run your business<br />
+                    with <span class="highlight">NOVERP</span>
+                </h1>
+
+                <p class="hero-subtitle text-muted">
+                    Manage sales, inventory, purchases, and customers from a single powerful platform.
+                    Built for speed, designed for clarity.
+                </p>
+
+                <div class="hero-actions">
+                    <a asp-page="/Account/Login" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow-sm">
+                        <i class="bi bi-box-arrow-in-right me-2"></i> Sign In to Dashboard
+                    </a>
+                    <a asp-page="/Account/Register" class="btn btn-outline-secondary btn-lg rounded-pill px-4 fw-semibold">
+                        Create Account
+                    </a>
+                </div>
+
+                <div class="hero-trust mt-3">
+                    <div class="hero-trust-item">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>No setup required</span>
+                    </div>
+                    <div class="hero-trust-item">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Role-based access</span>
+                    </div>
+                    <div class="hero-trust-item">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Real-time data</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Dashboard Preview Mockup -->
+            <div class="col-lg-6">
+                <div class="hero-preview-wrapper">
+                    <div class="hero-preview-card">
+                        <!-- Browser chrome -->
+                        <div class="preview-topbar">
+                            <div class="preview-dot red"></div>
+                            <div class="preview-dot amber"></div>
+                            <div class="preview-dot green"></div>
+                            <div class="preview-url-bar">
+                                <span>noverp.app/dashboard</span>
+                            </div>
+                        </div>
+                        <!-- Dashboard body -->
+                        <div class="preview-body">
+                            <!-- Sidebar -->
+                            <div class="preview-sidebar">
+                                <div class="preview-sidebar-icon active">
+                                    <i class="bi bi-grid-1x2-fill"></i>
+                                </div>
+                                <div class="preview-sidebar-icon">
+                                    <i class="bi bi-box-seam"></i>
+                                </div>
+                                <div class="preview-sidebar-icon">
+                                    <i class="bi bi-cash-stack"></i>
+                                </div>
+                                <div class="preview-sidebar-icon">
+                                    <i class="bi bi-people"></i>
+                                </div>
+                                <div class="preview-sidebar-icon">
+                                    <i class="bi bi-cart-check"></i>
+                                </div>
+                            </div>
+                            <!-- Content area -->
+                            <div class="preview-content">
+                                <!-- KPI row -->
+                                <div class="preview-stat-row">
+                                    <div class="preview-stat">
+                                        <div class="preview-stat-label">Revenue Today</div>
+                                        <div class="preview-stat-value green">$4,820</div>
+                                    </div>
+                                    <div class="preview-stat">
+                                        <div class="preview-stat-label">Products</div>
+                                        <div class="preview-stat-value">148</div>
+                                    </div>
+                                    <div class="preview-stat">
+                                        <div class="preview-stat-label">Customers</div>
+                                        <div class="preview-stat-value">63</div>
+                                    </div>
+                                    <div class="preview-stat">
+                                        <div class="preview-stat-label">Invoices</div>
+                                        <div class="preview-stat-value">217</div>
+                                    </div>
+                                </div>
+                                <!-- Table preview -->
+                                <div class="preview-table-bar">
+                                    <div class="preview-row">
+                                        <div class="preview-cell" style="width:15%"></div>
+                                        <div class="preview-cell" style="width:25%"></div>
+                                        <div class="preview-cell" style="width:20%"></div>
+                                        <div class="preview-cell" style="width:18%"></div>
+                                        <div class="preview-cell" style="width:12%"></div>
+                                    </div>
+                                    @for (int i = 0; i < 5; i++)
+                                    {
+                                        <div class="preview-row">
+                                            <div class="preview-cell" style="width:12%"></div>
+                                            <div class="preview-cell" style="width:22%"></div>
+                                            <div class="preview-cell" style="width:18%"></div>
+                                            <div class="preview-cell" style="width:15%"></div>
+                                            <div class="preview-cell" style="width:10%"></div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- ── FEATURES SECTION ── -->
+<section class="features-section">
+    <div class="container-xl px-4">
+        <div class="text-center mb-5">
+            <span class="section-label">Everything you need</span>
+            <h2 class="section-title">One platform, complete control</h2>
+            <p class="text-muted mt-2" style="max-width:480px; margin:0 auto;">
+                From inventory tracking to customer invoicing, NOVERP handles your entire operations workflow.
+            </p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon blue">
+                        <i class="bi bi-cash-stack"></i>
+                    </div>
+                    <div class="feature-title">Sales Invoicing</div>
+                    <p class="feature-desc">Create, manage, and print professional invoices. Track payment status and customer transaction history effortlessly.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon green">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
+                    <div class="feature-title">Inventory Management</div>
+                    <p class="feature-desc">Monitor stock levels in real time. Get low-stock alerts before you run out and maintain full product catalog control.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon purple">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <div class="feature-title">Customer Management</div>
+                    <p class="feature-desc">Keep a complete customer database. View purchase history, outstanding balances, and manage relationships all in one place.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon amber">
+                        <i class="bi bi-cart-check"></i>
+                    </div>
+                    <div class="feature-title">Purchase Invoices</div>
+                    <p class="feature-desc">Manage supplier orders and purchase invoices. Track what you owe and keep your procurement records clean and organized.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon cyan">
+                        <i class="bi bi-credit-card"></i>
+                    </div>
+                    <div class="feature-title">Payment Tracking</div>
+                    <p class="feature-desc">Record payments against invoices, track outstanding balances, and get a clear picture of your cash flow at any time.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon rose">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                    <div class="feature-title">Role-Based Access</div>
+                    <p class="feature-desc">Separate admin and user roles with granular permissions. Keep sensitive data protected while giving your team what they need.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── STATS SECTION ── -->
+<section class="stats-section">
+    <div class="container-xl px-4">
+        <div class="row g-0">
+            <div class="col-6 col-md-3">
+                <div class="stat-item">
+                    <div class="stat-number">360<span>°</span></div>
+                    <div class="stat-label">Business Visibility</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-item">
+                    <div class="stat-number"><span>∞</span></div>
+                    <div class="stat-label">Products & Invoices</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-item">
+                    <div class="stat-number">2<span>+</span></div>
+                    <div class="stat-label">Access Roles</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-item">
+                    <div class="stat-number">24<span>/7</span></div>
+                    <div class="stat-label">Real-Time Data</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── CTA SECTION ── -->
+<section class="cta-section">
+    <div class="container-xl px-4">
+        <div class="cta-card">
+            <h2 class="cta-title">Ready to take control?</h2>
+            <p class="cta-subtitle">
+                Sign in to your dashboard and get a real-time view of your entire business operation.
+            </p>
+            <div class="d-flex flex-wrap justify-content-center gap-3">
+                <a asp-page="/Account/Login" class="btn btn-light btn-lg rounded-pill px-5 fw-bold text-primary shadow-sm">
+                    <i class="bi bi-box-arrow-in-right me-2"></i> Sign In Now
+                </a>
+                <a asp-page="/Account/Register" class="btn btn-outline-light btn-lg rounded-pill px-4 fw-semibold">
+                    Create Free Account
+                </a>
+            </div>
+        </div>
+    </div>
+</section>

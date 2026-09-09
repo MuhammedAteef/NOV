@@ -1,0 +1,117 @@
+@page "{id:int}"
+@model SystemManagementSystem.Pages.SalesInvoices.EditModel
+@{
+    ViewData["Title"] = "Edit Sales Invoice";
+}
+
+<div class="container my-4" style="max-width: 900px;">
+    <!-- Navigation Back Link -->
+    <div class="mb-3">
+        <a asp-page="./Index" class="text-decoration-none text-secondary d-inline-flex align-items-center gap-1">
+            <i class="bi bi-arrow-left"></i> Back to Sales Invoices
+        </a>
+    </div>
+
+    <!-- Page Header -->
+    <div class="mb-4">
+        <h2 class="fw-bold text-dark mb-0">Edit Sales Invoice</h2>
+        <p class="text-muted small mb-0">Modify the invoice details and adjust product line items below.</p>
+    </div>
+
+    <form method="post" id="invoiceForm">
+        <input type="hidden" asp-for="Invoice.SalesInvoiceId" />
+        <div asp-validation-summary="All" class="alert alert-danger small mb-3" style="display:none" id="validationSummary"></div>
+
+        <!-- ── INVOICE HEADER CARD ── -->
+        <div class="card shadow-sm border-0 rounded-3 mb-4">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h5 class="fw-bold mb-0"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Invoice Details</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3">
+                    <!-- Customer -->
+                    <div class="col-md-6">
+                        <label asp-for="Invoice.CustomerId" class="form-label fw-semibold">Customer</label>
+                        <select asp-for="Invoice.CustomerId" asp-items="Model.CustomerList" class="form-select" required>
+                            <option value="">-- Select Customer --</option>
+                        </select>
+                        <span asp-validation-for="Invoice.CustomerId" class="text-danger small"></span>
+                    </div>
+                    <!-- Invoice Date -->
+                    <div class="col-md-6">
+                        <label asp-for="Invoice.InvoiceDate" class="form-label fw-semibold">Invoice Date</label>
+                        <input asp-for="Invoice.InvoiceDate" type="date" class="form-control"
+                               value="@Model.Invoice.InvoiceDate.ToString("yyyy-MM-dd")" required />
+                        <span asp-validation-for="Invoice.InvoiceDate" class="text-danger small"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── LINE ITEMS CARD ── -->
+        <div class="card shadow-sm border-0 rounded-3 mb-4">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0"><i class="bi bi-list-ul me-2 text-primary"></i>Product Line Items</h5>
+                <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" onclick="window.invoiceEditApp.addNewRow()">
+                    <i class="bi bi-plus-lg"></i> Add Row
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="itemsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4" style="min-width:220px;">Product</th>
+                                <th style="width:130px;">Quantity</th>
+                                <th style="width:160px;">Unit Price</th>
+                                <th style="width:160px;">Sub Total</th>
+                                <th style="width:70px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsBody">
+                            <!-- Rows injected by JS on page load -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light">
+                                <td colspan="3" class="text-end fw-bold pe-3 py-3">Total Amount:</td>
+                                <td class="fw-bold text-primary py-3" id="grandTotal">$0.00</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <p class="text-muted small px-4 pb-3 mb-0" id="noRowsMsg" style="display:none">
+                    No items added yet. Click <strong>Add Row</strong> to begin.
+                </p>
+            </div>
+        </div>
+
+        <!-- ── ACTION BUTTONS ── -->
+        <div class="d-flex justify-content-end gap-2">
+            <a asp-page="./Index" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary px-4">
+                <i class="bi bi-save me-1"></i> Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="~/js/invoice-edit.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            initInvoiceEdit({
+                products: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ProductList)),
+                existingItems: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                    Model.ExistingItems.Select(i => new {
+                        itemId    = i.SalesItemId,
+                        productId = i.ProductId,
+                        quantity  = i.Quantity,
+                        unitPrice = i.UnitPrice
+                    })
+                )),
+                itemIdFieldName: 'SalesItemId'
+            });
+        });
+    </script>
+}

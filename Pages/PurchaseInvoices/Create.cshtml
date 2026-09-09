@@ -1,0 +1,155 @@
+@page
+@model SystemManagementSystem.Pages.PurchaseInvoices.CreateModel
+@{
+    ViewData["Title"] = "Create Purchase Invoice";
+}
+
+<div class="container my-4" style="max-width: 900px;">
+    <!-- Navigation Back Link -->
+    <div class="mb-3">
+        <a asp-page="./Index" class="text-decoration-none text-secondary d-inline-flex align-items-center gap-1">
+            <i class="bi bi-arrow-left"></i> Back to Purchase Invoices
+        </a>
+    </div>
+
+    <!-- Page Header -->
+    <div class="mb-4">
+        <h2 class="fw-bold text-dark mb-0">Create Purchase Invoice</h2>
+        <p class="text-muted small mb-0">Fill in the invoice details, add line items, and select payment options below.</p>
+    </div>
+
+    <form method="post" id="invoiceForm">
+        <input type="hidden" asp-for="StripePaymentIntentId" id="stripePaymentIntentId" />
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="All" class="alert alert-danger small mb-3" style="display:none" id="validationSummary"></div>
+
+        <!-- ── INVOICE HEADER CARD ── -->
+        <div class="card shadow-sm border-0 rounded-3 mb-4">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h5 class="fw-bold mb-0"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Invoice Details</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3">
+                    <!-- Supplier -->
+                    <div class="col-md-6">
+                        <label asp-for="Invoice.SupplierId" class="form-label fw-semibold">Supplier</label>
+                        <select asp-for="Invoice.SupplierId" asp-items="Model.SupplierList" class="form-select" required>
+                            <option value="">-- Select Supplier --</option>
+                        </select>
+                        <span asp-validation-for="Invoice.SupplierId" class="text-danger small"></span>
+                    </div>
+                    <!-- Invoice Date -->
+                    <div class="col-md-6">
+                        <label asp-for="Invoice.InvoiceDate" class="form-label fw-semibold">Invoice Date</label>
+                        <input asp-for="Invoice.InvoiceDate" type="date" class="form-control"
+                               value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        <span asp-validation-for="Invoice.InvoiceDate" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Invoice.RemainingAmount" class="form-label fw-semibold">Remaining Amount</label>
+                        <input asp-for="Invoice.RemainingAmount" type="number" class="form-control"
+                               value="0.00" min="0.00" required />
+                        <span asp-validation-for="Invoice.RemainingAmount" class="text-danger small"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── LINE ITEMS CARD ── -->
+        <div class="card shadow-sm border-0 rounded-3 mb-4">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0"><i class="bi bi-list-ul me-2 text-primary"></i>Product Line Items</h5>
+    
+                <!-- Group the buttons together -->
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" onclick="window.invoiceApp.addRow()">
+                        <i class="bi bi-plus-lg"></i> Add Row
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="itemsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4" style="min-width:220px;">Product</th>
+                                <th style="width:130px;">Quantity</th>
+                                <th style="width:160px;">Unit Price</th>
+                                <th style="width:160px;">Sub Total</th>
+                                <th style="width:70px;"></th>
+                                <th style="width:70px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsBody">
+                            <!-- First row rendered dynamically by shared JS -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light">
+                                <td colspan="3" class="text-end fw-bold pe-3 py-3">Total Amount:</td>
+                                <td class="fw-bold text-primary py-3" id="grandTotal">$0.00</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <p class="text-muted small px-4 pb-3 mb-0" id="noRowsMsg" style="display:none">
+                    No items added yet. Click <strong>Add Row</strong> to begin.
+                </p>
+            </div>
+        </div>
+
+        <!-- ── PAYMENT SECTION CARD ── -->
+        <div class="card shadow-sm border-0 rounded-3 mb-4">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h5 class="fw-bold mb-0"><i class="bi bi-credit-card me-2 text-primary"></i>Payment Options</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="PaymentMethod" class="form-label fw-semibold">Payment Status / Method</label>
+                        <select asp-for="PaymentMethod" class="form-select" id="paymentMethodSelect" required>
+                            <option value="Cash">Cash</option>
+                            <option value="Card">Card</option>
+                        </select>
+                    </div>
+
+                    <!-- Stripe Card Element Container -->
+                    <div class="col-12" id="stripeCardContainer" style="display:none;">
+                        <label class="form-label fw-semibold">Stripe Card Details</label>
+                        <div id="card-element" class="form-control p-3 bg-white shadow-sm border rounded-3"></div>
+                        
+                        <!-- Card Error Alert Box -->
+                        <div id="card-alert" class="alert alert-danger d-flex align-items-center gap-2 mt-2 py-2 px-3 small" style="display:none;" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill fs-6 flex-shrink-0"></i>
+                            <span id="card-error-msg" class="fw-semibold"></span>
+                        </div>
+
+                        <small class="text-muted d-block mt-1"><i class="bi bi-shield-lock me-1"></i>Card payment processed securely via Stripe.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── ACTION BUTTONS ── -->
+        <div class="d-flex justify-content-end gap-2">
+            <a asp-page="./Index" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary px-4" id="saveInvoiceBtn">
+                <i class="bi bi-save me-1"></i> Save Invoice
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="~/js/invoice-create.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            initInvoiceForm({
+                products: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ProductList)),
+                stripeKey: '@Model.StripePublishableKey'
+            });
+        });
+    </script>
+}

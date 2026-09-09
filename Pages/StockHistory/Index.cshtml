@@ -1,0 +1,62 @@
+@page
+@model SystemManagementSystem.Pages.StockHistory.IndexModel
+@{
+    ViewData["Title"] = "Index";
+}
+
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="fw-bold text-dark mb-0">Stock History</h2>
+            <p class="text-muted small mb-0">View all stock movement records</p>
+        </div>
+    </div>
+
+    <!-- Stock History Table Card -->
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="ps-4">ID</th>
+                            <th scope="col">Product</th>
+                            <th scope="col">Movement Type</th>
+                            <th scope="col">Change Qty</th>
+                            <th scope="col">Movement Date</th>
+                            <th scope="col">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.allStockHistories != null && Model.allStockHistories.Any())
+                        {
+                            @foreach (var history in Model.allStockHistories)
+                            {
+                                <tr>
+                                    <td class="ps-4 fw-semibold text-secondary">#@history.StockHistoryId</td>
+                                    <td class="fw-bold text-dark">@history.Product?.Name</td>
+                                    <td>
+                                        <span class="badge @(history.MovementType == "IN" ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger")">
+                                            @history.MovementType
+                                        </span>
+                                    </td>
+                                    <td>@history.ChangeQuantity</td>
+                                    <td>@history.MovementDate.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td>@history.Notes</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    No stock history records found.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
