@@ -5,14 +5,14 @@
 }
 
 <div class="container my-4" style="max-width: 600px;">
-    <!-- Navigation Back Link -->
+
     <div class="mb-3">
         <a asp-page="./Index" class="text-decoration-none text-secondary d-inline-flex align-items-center gap-1">
             <i class="bi bi-arrow-left"></i> Back to Suppliers
         </a>
     </div>
 
-    <!-- Main Card -->
+
     <div class="card shadow-sm border-0 rounded-3">
         <div class="card-header bg-white py-3 border-0">
             <h3 class="fw-bold text-dark mb-0">Create New Supplier</h3>
@@ -22,28 +22,28 @@
             <form method="post">
                 <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
 
-                <!-- Supplier Name Field -->
+
                 <div class="mb-3">
                     <label asp-for="Supplier.Name" class="form-label fw-semibold">Supplier Name</label>
                     <input asp-for="Supplier.Name" class="form-control" placeholder="e.g. Acme Corporation" required />
                     <span asp-validation-for="Supplier.Name" class="text-danger small"></span>
                 </div>
 
-                <!-- Phone Field -->
+
                 <div class="mb-3">
                     <label asp-for="Supplier.Phone" class="form-label fw-semibold">Phone Number</label>
                     <input asp-for="Supplier.Phone" class="form-control" placeholder="e.g. +1 555-0199" />
                     <span asp-validation-for="Supplier.Phone" class="text-danger small"></span>
                 </div>
 
-                <!-- Address Field -->
+
                 <div class="mb-4">
                     <label asp-for="Supplier.Address" class="form-label fw-semibold">Address</label>
                     <textarea asp-for="Supplier.Address" class="form-control" rows="3" placeholder="e.g. 123 Main Street, Suite 400"></textarea>
                     <span asp-validation-for="Supplier.Address" class="text-danger small"></span>
                 </div>
 
-                <!-- Action Buttons -->
+
                 <div class="d-flex justify-content-end gap-2">
                     <a asp-page="./Index" class="btn btn-outline-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary px-4">Save Supplier</button>

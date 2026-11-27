@@ -4,14 +4,14 @@
     ViewData["Title"] = "Delete";
 }
 <div class="container my-4" style="max-width: 600px;">
-    <!-- Navigation Back Link -->
+
     <div class="mb-3">
         <a asp-page="./Index" class="text-decoration-none text-secondary d-inline-flex align-items-center gap-1">
             <i class="bi bi-arrow-left"></i> Back to Customers
         </a>
     </div>
 
-    <!-- Main Card -->
+
     <div class="card shadow-sm border-0 rounded-3">
         <div class="card-header bg-white py-3 border-0">
             <h3 class="fw-bold text-dark mb-0">Delete Customer</h3>
@@ -22,31 +22,31 @@
                 <input type="hidden" asp-for="Customer.CustomerId" />
                 <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
 
-                <!-- Customer Name Field -->
+
                 <div class="mb-3">
                     <label asp-for="Customer.Name" class="form-label fw-semibold">Customer Name</label>
                     <input asp-for="Customer.Name" class="form-control" readonly />
                 </div>
 
-                <!-- Phone Field -->
+
                 <div class="mb-3">
                     <label asp-for="Customer.Phone" class="form-label fw-semibold">Phone Number</label>
                     <input asp-for="Customer.Phone" class="form-control" readonly />
                 </div>
 
-                <!-- Email Field -->
+
                 <div class="mb-3">
                     <label asp-for="Customer.Email" class="form-label fw-semibold">Email Address</label>
                     <input asp-for="Customer.Email" class="form-control" readonly />
                 </div>
 
-                <!-- Address Field -->
+
                 <div class="mb-4">
                     <label asp-for="Customer.Address" class="form-label fw-semibold">Address</label>
                     <textarea asp-for="Customer.Address" class="form-control" rows="3" readonly></textarea>
                 </div>
 
-                <!-- Action Buttons -->
+
                 <div class="d-flex justify-content-end gap-2">
                     <a asp-page="./Index" class="btn btn-outline-secondary">Cancel</a>
                     <button type="submit" class="btn btn-danger px-4">

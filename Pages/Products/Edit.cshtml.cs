@@ -44,7 +44,17 @@ public class EditModel : PageModel
             return Page();
         }
 
-        _unitOfWork.Products.Update(Product);
+        var product = await _unitOfWork.Products.GetByIdAsync(Product.ProductId);
+        if (product is null)
+        {
+            return NotFound();
+        }
+
+        product.Name = Product.Name;
+        product.Description = Product.Description;
+        product.CategoryId = Product.CategoryId;
+        product.PurchasePrice = Product.PurchasePrice;
+        product.SellingPrice = Product.SellingPrice;
         await _unitOfWork.SaveChangesAsync();
         TempData["SuccessMessage"] = "Product updated successfully.";
         return RedirectToPage("./Index");

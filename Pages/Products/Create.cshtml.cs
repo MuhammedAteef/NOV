@@ -16,7 +16,7 @@ public class CreateModel : PageModel
     }
 
     [BindProperty]
-    public Product Product { get; set; } = default!;
+    public Product Product { get; set; } = new();
 
     public SelectList CategoryList { get; set; } = default!;
 
@@ -35,6 +35,8 @@ public class CreateModel : PageModel
             return Page();
         }
 
+        Product.StockQuantity = 0;
+        Product.SellingPrice = Math.Round(Product.PurchasePrice * 1.30m, 2);
         await _unitOfWork.Products.AddAsync(Product);
         await _unitOfWork.SaveChangesAsync();
         TempData["SuccessMessage"] = "Product created successfully.";

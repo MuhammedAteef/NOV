@@ -39,19 +39,16 @@ public class IndexModel : PageModel
 
         var invoices = await _unitOfWork.PurchaseInvoices.GetAllWithSupplierAsync();
 
-        // 1. Filter by Supplier ID
         if (SupplierId.HasValue && SupplierId.Value > 0)
         {
             invoices = invoices.Where(i => i.SupplierId == SupplierId.Value).ToList();
         }
 
-        // 2. Filter by Invoice ID
         if (InvoiceId.HasValue && InvoiceId.Value > 0)
         {
             invoices = invoices.Where(i => i.PurchaseInvoiceId == InvoiceId.Value).ToList();
         }
 
-        // 3. Search Term (Invoice # or Supplier Name)
         if (!string.IsNullOrWhiteSpace(SearchTerm))
         {
             string term = SearchTerm.Trim();
@@ -66,7 +63,6 @@ public class IndexModel : PageModel
             }
         }
 
-        // 4. Filter by Status (Completed, UnCompleted, Deleted)
         if (!string.IsNullOrWhiteSpace(Status))
         {
             if (Status.Equals("Completed", StringComparison.OrdinalIgnoreCase))
@@ -82,7 +78,6 @@ public class IndexModel : PageModel
                 invoices = invoices.Where(i => i.IsDeleted).ToList();
             }
         }
-        // 5. Filter by Selected Date
         if (SelectedDate.HasValue)
         {
             invoices = invoices.Where(i => i.InvoiceDate == SelectedDate.Value).ToList();

@@ -285,6 +285,10 @@ namespace SystemManagementSystem.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(12, 2)");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTime>("PaymentDate")
                         .HasColumnType("datetime");
 
@@ -314,9 +318,17 @@ namespace SystemManagementSystem.Migrations
 
                     b.HasKey("PaymentId");
 
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("[IdempotencyKey] IS NOT NULL");
+
                     b.HasIndex("PurchaseInvoiceId");
 
                     b.HasIndex("SalesInvoiceId");
+
+                    b.HasIndex("StripePaymentIntentId")
+                        .IsUnique()
+                        .HasFilter("[StripePaymentIntentId] IS NOT NULL");
 
                     b.ToTable("Payments");
                 });
@@ -359,7 +371,10 @@ namespace SystemManagementSystem.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.ToTable("Products");
+                    b.ToTable("Products", t =>
+                        {
+                            t.HasCheckConstraint("CK_Products_StockQuantity_NonNegative", "[StockQuantity] >= 0");
+                        });
                 });
 
             modelBuilder.Entity("SystemManagementSystem.Models.PurchaseInvoice", b =>
@@ -389,6 +404,10 @@ namespace SystemManagementSystem.Migrations
                     b.Property<decimal>("RemainingAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("RequestKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<int>("SupplierId")
                         .HasColumnType("int");
 
@@ -397,6 +416,10 @@ namespace SystemManagementSystem.Migrations
 
                     b.HasKey("PurchaseInvoiceId")
                         .HasName("PK__Purchase__4E3CABD30209D881");
+
+                    b.HasIndex("RequestKey")
+                        .IsUnique()
+                        .HasFilter("[RequestKey] IS NOT NULL");
 
                     b.HasIndex("SupplierId");
 
@@ -443,6 +466,125 @@ namespace SystemManagementSystem.Migrations
                     b.ToTable("PurchaseInvoiceItems");
                 });
 
+            modelBuilder.Entity("SystemManagementSystem.Models.PurchaseRefund", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("PurchaseInvoiceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("RefundDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("RequestKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PurchaseInvoiceId");
+
+                    b.HasIndex("RequestKey")
+                        .IsUnique()
+                        .HasFilter("[RequestKey] IS NOT NULL");
+
+                    b.ToTable("PurchaseRefunds");
+                });
+
+            modelBuilder.Entity("SystemManagementSystem.Models.PurchaseRefundItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("PurchaseInvoiceItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PurchaseRefundId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("decimal(21, 2)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(10, 2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PurchaseInvoiceItemId");
+
+                    b.HasIndex("PurchaseRefundId", "PurchaseInvoiceItemId")
+                        .IsUnique();
+
+                    b.ToTable("PurchaseRefundItems");
+                });
+
+            modelBuilder.Entity("SystemManagementSystem.Models.Refund", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.Property<int>("InvoiceId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Method")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("RefundDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<int>("SalesReturnId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("SalesReturnId")
+                        .IsUnique();
+
+                    b.ToTable("Refunds");
+                });
+
             modelBuilder.Entity("SystemManagementSystem.Models.SalesInvoice", b =>
                 {
                     b.Property<int>("SalesInvoiceId")
@@ -467,6 +609,10 @@ namespace SystemManagementSystem.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
+                    b.Property<string>("RequestKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(12, 2)");
 
@@ -474,6 +620,10 @@ namespace SystemManagementSystem.Migrations
                         .HasName("PK__SalesInv__BA05CD1A8BCC12CC");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("RequestKey")
+                        .IsUnique()
+                        .HasFilter("[RequestKey] IS NOT NULL");
 
                     b.ToTable("SalesInvoices");
                 });
@@ -518,6 +668,77 @@ namespace SystemManagementSystem.Migrations
                     b.ToTable("SalesInvoiceItems");
                 });
 
+            modelBuilder.Entity("SystemManagementSystem.Models.SalesReturn", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("InvoiceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RequestKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("ReturnDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(12, 2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("RequestKey")
+                        .IsUnique()
+                        .HasFilter("[RequestKey] IS NOT NULL");
+
+                    b.ToTable("SalesReturns");
+                });
+
+            modelBuilder.Entity("SystemManagementSystem.Models.SalesReturnItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("InvoiceItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SalesReturnId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("decimal(21, 2)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(10, 2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceItemId");
+
+                    b.HasIndex("SalesReturnId", "InvoiceItemId")
+                        .IsUnique();
+
+                    b.ToTable("SalesReturnItems");
+                });
+
             modelBuilder.Entity("SystemManagementSystem.Models.StockHistory", b =>
                 {
                     b.Property<int>("StockHistoryId")
@@ -546,10 +767,38 @@ namespace SystemManagementSystem.Migrations
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("PurchaseInvoiceId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PurchaseRefundId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SalesInvoiceId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SalesReturnId")
+                        .HasColumnType("int");
+
                     b.HasKey("StockHistoryId")
                         .HasName("PK__StockHis__A6CE86FB43ECF17D");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("PurchaseInvoiceId", "ProductId")
+                        .IsUnique()
+                        .HasFilter("[PurchaseInvoiceId] IS NOT NULL");
+
+                    b.HasIndex("PurchaseRefundId", "ProductId")
+                        .IsUnique()
+                        .HasFilter("[PurchaseRefundId] IS NOT NULL");
+
+                    b.HasIndex("SalesInvoiceId", "ProductId")
+                        .IsUnique()
+                        .HasFilter("[SalesInvoiceId] IS NOT NULL");
+
+                    b.HasIndex("SalesReturnId", "ProductId")
+                        .IsUnique()
+                        .HasFilter("[SalesReturnId] IS NOT NULL");
 
                     b.ToTable("StockHistory", (string)null);
                 });
@@ -730,6 +979,53 @@ namespace SystemManagementSystem.Migrations
                     b.Navigation("PurchaseInvoice");
                 });
 
+            modelBuilder.Entity("SystemManagementSystem.Models.PurchaseRefund", b =>
+                {
+                    b.HasOne("SystemManagementSystem.Models.PurchaseInvoice", "PurchaseInvoice")
+                        .WithMany("Refunds")
+                        .HasForeignKey("PurchaseInvoiceId")
+                        .IsRequired()
+                        .HasConstraintName("FK_PurchaseRefund_Invoice");
+
+                    b.Navigation("PurchaseInvoice");
+                });
+
+            modelBuilder.Entity("SystemManagementSystem.Models.PurchaseRefundItem", b =>
+                {
+                    b.HasOne("SystemManagementSystem.Models.PurchaseInvoiceItem", null)
+                        .WithMany()
+                        .HasForeignKey("PurchaseInvoiceItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SystemManagementSystem.Models.PurchaseRefund", "PurchaseRefund")
+                        .WithMany("Items")
+                        .HasForeignKey("PurchaseRefundId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PurchaseRefund");
+                });
+
+            modelBuilder.Entity("SystemManagementSystem.Models.Refund", b =>
+                {
+                    b.HasOne("SystemManagementSystem.Models.SalesInvoice", "Invoice")
+                        .WithMany("Refunds")
+                        .HasForeignKey("InvoiceId")
+                        .IsRequired()
+                        .HasConstraintName("FK_Refund_Invoice");
+
+                    b.HasOne("SystemManagementSystem.Models.SalesReturn", "SalesReturn")
+                        .WithMany("Refunds")
+                        .HasForeignKey("SalesReturnId")
+                        .IsRequired()
+                        .HasConstraintName("FK_Refund_SalesReturn");
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("SalesReturn");
+                });
+
             modelBuilder.Entity("SystemManagementSystem.Models.SalesInvoice", b =>
                 {
                     b.HasOne("SystemManagementSystem.Models.Customer", "Customer")
@@ -760,6 +1056,32 @@ namespace SystemManagementSystem.Migrations
                     b.Navigation("SalesInvoice");
                 });
 
+            modelBuilder.Entity("SystemManagementSystem.Models.SalesReturn", b =>
+                {
+                    b.HasOne("SystemManagementSystem.Models.SalesInvoice", null)
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .IsRequired()
+                        .HasConstraintName("FK_SalesReturn_Invoice");
+                });
+
+            modelBuilder.Entity("SystemManagementSystem.Models.SalesReturnItem", b =>
+                {
+                    b.HasOne("SystemManagementSystem.Models.SalesInvoiceItem", null)
+                        .WithMany()
+                        .HasForeignKey("InvoiceItemId")
+                        .IsRequired()
+                        .HasConstraintName("FK_SalesReturnItem_InvoiceItem");
+
+                    b.HasOne("SystemManagementSystem.Models.SalesReturn", "SalesReturn")
+                        .WithMany("Items")
+                        .HasForeignKey("SalesReturnId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SalesReturn");
+                });
+
             modelBuilder.Entity("SystemManagementSystem.Models.StockHistory", b =>
                 {
                     b.HasOne("SystemManagementSystem.Models.Product", "Product")
@@ -767,6 +1089,26 @@ namespace SystemManagementSystem.Migrations
                         .HasForeignKey("ProductId")
                         .IsRequired()
                         .HasConstraintName("FK_StockHistory_Product");
+
+                    b.HasOne("SystemManagementSystem.Models.PurchaseInvoice", null)
+                        .WithMany()
+                        .HasForeignKey("PurchaseInvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SystemManagementSystem.Models.PurchaseRefund", null)
+                        .WithMany()
+                        .HasForeignKey("PurchaseRefundId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SystemManagementSystem.Models.SalesInvoice", null)
+                        .WithMany()
+                        .HasForeignKey("SalesInvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SystemManagementSystem.Models.SalesReturn", null)
+                        .WithMany()
+                        .HasForeignKey("SalesReturnId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Product");
                 });
@@ -804,11 +1146,27 @@ namespace SystemManagementSystem.Migrations
             modelBuilder.Entity("SystemManagementSystem.Models.PurchaseInvoice", b =>
                 {
                     b.Navigation("PurchaseInvoiceItems");
+
+                    b.Navigation("Refunds");
+                });
+
+            modelBuilder.Entity("SystemManagementSystem.Models.PurchaseRefund", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("SystemManagementSystem.Models.SalesInvoice", b =>
                 {
+                    b.Navigation("Refunds");
+
                     b.Navigation("SalesInvoiceItems");
+                });
+
+            modelBuilder.Entity("SystemManagementSystem.Models.SalesReturn", b =>
+                {
+                    b.Navigation("Items");
+
+                    b.Navigation("Refunds");
                 });
 
             modelBuilder.Entity("SystemManagementSystem.Models.Supplier", b =>

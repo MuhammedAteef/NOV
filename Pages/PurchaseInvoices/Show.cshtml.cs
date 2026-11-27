@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using Stripe;
 using SystemManagementSystem.Models;
 using SystemManagementSystem.Repositories;
 using SystemManagementSystem.Services;
@@ -10,18 +12,28 @@ public class ShowModel : PageModel
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPaymentService _paymentService;
+    private readonly IInvoiceWorkflowService _invoiceWorkflow;
     private readonly IConfiguration _config;
+    private readonly ILogger<ShowModel> _logger;
 
-    public ShowModel(IUnitOfWork unitOfWork, IPaymentService paymentService, IConfiguration config)
+    public ShowModel(
+        IUnitOfWork unitOfWork,
+        IPaymentService paymentService,
+        IInvoiceWorkflowService invoiceWorkflow,
+        IConfiguration config,
+        ILogger<ShowModel> logger)
     {
         _unitOfWork = unitOfWork;
         _paymentService = paymentService;
+        _invoiceWorkflow = invoiceWorkflow;
         _config = config;
+        _logger = logger;
     }
 
     public PurchaseInvoice Invoice { get; set; } = default!;
     public List<PurchaseInvoiceItem> LineItems { get; set; } = new();
     public List<Payment> Payments { get; set; } = new();
+    public List<PurchaseRefund> Refunds { get; set; } = new();
     public decimal TotalPaid { get; set; }
     public decimal Remaining { get; set; }
     public string StripePublishableKey { get; set; } = "";
@@ -35,110 +47,102 @@ public class ShowModel : PageModel
     [BindProperty]
     public string? StripePaymentIntentId { get; set; }
 
+    [BindProperty]
+    public string PaymentRequestKey { get; set; } = "";
+
     public async Task<IActionResult> OnGetAsync(int? id)
     {
-        if (id == null) return NotFound();
-
-        StripePublishableKey = _config["Stripe:PublishableKey"] ?? "";
-        Invoice = await _unitOfWork.PurchaseInvoices.GetWithDetailsAsync(id.Value);
-
-        if (Invoice is null) return NotFound();
-
-        LineItems = Invoice.PurchaseInvoiceItems.ToList();
-
-        Payments = await _unitOfWork.Payments.FindAsync(p => p.PurchaseInvoiceId == id);
-        Payments = Payments.OrderByDescending(p => p.PaymentDate).ToList();
-
-        // Calculate paid and remaining based on payments and stored columns
-        TotalPaid = Payments.Sum(p => p.Amount);
-        //Remaining = Invoice.TotalAmount - TotalPaid;
-        Remaining = Invoice.RemainingAmount;
-
-
-        // Ensure database entity fields stay in sync
-        if (Invoice.PaidAmount != TotalPaid || Invoice.RemainingAmount != Remaining)
+        if (id is null)
         {
-            Invoice.PaidAmount = TotalPaid;
-            Invoice.RemainingAmount = Remaining < 0 ? 0 : Remaining;
-            _unitOfWork.PurchaseInvoices.Update(Invoice);
-            await _unitOfWork.SaveChangesAsync();
+            return NotFound();
         }
+
+        var invoice = await _unitOfWork.PurchaseInvoices.GetWithDetailsAsync(id.Value);
+        if (invoice is null)
+        {
+            return NotFound();
+        }
+
+        Invoice = invoice;
+        LineItems = invoice.PurchaseInvoiceItems.ToList();
+        Payments = await _unitOfWork.Payments.Query()
+            .Where(payment => payment.PurchaseInvoiceId == id && payment.Status == "Paid")
+            .OrderByDescending(payment => payment.PaymentDate)
+            .ToListAsync();
+        TotalPaid = Payments.Sum(payment => payment.Amount);
+        Remaining = Math.Max(0, Invoice.TotalAmount - TotalPaid);
+        StripePublishableKey = _config["Stripe:PublishableKey"] ?? "";
+        PaymentRequestKey = Guid.NewGuid().ToString("N");
+
+        Refunds = await _unitOfWork.PurchaseRefunds.Query()
+            .Include(refund => refund.Items)
+            .Where(refund => refund.PurchaseInvoiceId == id)
+            .OrderByDescending(refund => refund.RefundDate)
+            .ToListAsync();
 
         return Page();
     }
 
-    // ── AJAX Handler for creating Stripe Payment Intent in Pay Remaining Modal ──
-    public async Task<IActionResult> OnPostCreateIntentAsync([FromForm] decimal amount)
+    public async Task<IActionResult> OnPostCreateIntentAsync([FromForm] decimal amount, [FromForm] int id)
     {
+        var invoice = await _unitOfWork.PurchaseInvoices.GetByIdAsync(id);
+        if (invoice is null || invoice.IsDeleted)
+        {
+            return new JsonResult(new { error = "Purchase invoice was not found." })
+            {
+                StatusCode = StatusCodes.Status404NotFound
+            };
+        }
+
+        var payments = await _unitOfWork.Payments.FindAsync(
+            payment => payment.PurchaseInvoiceId == id && payment.Status == "Paid");
+        var remaining = invoice.TotalAmount - payments.Sum(payment => payment.Amount);
+        if (amount <= 0 || amount > remaining || decimal.Round(amount, 2) != amount)
+        {
+            return new JsonResult(new { error = "Payment must be positive and cannot exceed the remaining invoice balance." })
+            {
+                StatusCode = StatusCodes.Status400BadRequest
+            };
+        }
+
         try
         {
-            if (amount <= 0) return new JsonResult(new { error = "Amount must be greater than zero." }) { StatusCode = 400 };
             var (clientSecret, intentId) = await _paymentService.CreateStripePaymentIntentAsync(amount);
             return new JsonResult(new { clientSecret, intentId });
         }
-        catch (Exception ex)
+        catch (StripeException exception)
         {
-            return new JsonResult(new { error = ex.Message }) { StatusCode = 400 };
+            _logger.LogError(exception, "Stripe could not authorize a purchase invoice payment.");
+            return new JsonResult(new { error = "Card authorization failed. Please try again." })
+            {
+                StatusCode = StatusCodes.Status502BadGateway
+            };
         }
     }
 
-    // ── Handler for Pay Remaining Submit ──
     public async Task<IActionResult> OnPostPayRemainingAsync(int id)
     {
-        StripePublishableKey = _config["Stripe:PublishableKey"] ?? "";
-        Invoice = await _unitOfWork.PurchaseInvoices.GetByIdAsync(id);
-        if (Invoice == null || Invoice.IsDeleted) return NotFound();
-
-        var existingPayments = await _unitOfWork.Payments.FindAsync(p => p.PurchaseInvoiceId == id);
-        decimal currentPaid = existingPayments.Sum(p => p.Amount);
-        decimal currentRemaining = Invoice.TotalAmount - currentPaid;
-
-        if (PayAmount <= 0)
+        try
         {
-            TempData["ErrorMessage"] = "Payment amount must be greater than zero.";
-            return RedirectToPage(new { id });
+            var payment = await _invoiceWorkflow.AddPurchasePaymentAsync(
+                id,
+                PayAmount,
+                PaymentMethod,
+                PaymentRequestKey,
+                StripePaymentIntentId);
+
+            TempData["SuccessMessage"] = $"Payment of ${payment.Amount:N2} processed for Purchase Invoice #{id}.";
+        }
+        catch (InvalidOperationException exception)
+        {
+            TempData["ErrorMessage"] = exception.Message;
+        }
+        catch (StripeException exception)
+        {
+            _logger.LogError(exception, "Stripe payment processing failed for purchase invoice {InvoiceId}.", id);
+            TempData["ErrorMessage"] = "Card payment could not be completed. The purchase invoice was not updated.";
         }
 
-        if (PayAmount > currentRemaining)
-        {
-            TempData["ErrorMessage"] = $"Payment amount (${PayAmount:N2}) cannot exceed the remaining balance of ${currentRemaining:N2}.";
-            return RedirectToPage(new { id });
-        }
-
-        if (PaymentMethod == "Card")
-        {
-            if (string.IsNullOrEmpty(StripePaymentIntentId))
-            {
-                TempData["ErrorMessage"] = "Stripe Card Payment transaction incomplete.";
-                return RedirectToPage(new { id });
-            }
-
-            var paymentStatus = await _paymentService.PaymentStatusAsync(StripePaymentIntentId);
-            if (paymentStatus != "succeeded")
-            {
-                TempData["ErrorMessage"] = "Card payment was not completed successfully.";
-                return RedirectToPage(new { id });
-            }
-        }
-
-        // 1. Record the payment entry in Payment table via PaymentService
-        await _paymentService.ProcessInvoicePaymentAsync(
-            salesInvoiceId: null,
-            purchaseInvoiceId: Invoice.PurchaseInvoiceId,
-            amount: PayAmount,
-            paymentMethod: PaymentMethod,
-            stripePaymentIntentId: StripePaymentIntentId
-        );
-
-        // 2. Update Invoice PaidAmount & RemainingAmount
-        Invoice.PaidAmount = currentPaid + PayAmount;
-        Invoice.RemainingAmount = Invoice.TotalAmount - Invoice.PaidAmount;
-        if (Invoice.RemainingAmount < 0) Invoice.RemainingAmount = 0;
-
-        _unitOfWork.PurchaseInvoices.Update(Invoice);
-        await _unitOfWork.SaveChangesAsync();
-
-        TempData["SuccessMessage"] = $"Payment of ${PayAmount:N2} processed successfully. Remaining balance updated.";
         return RedirectToPage(new { id });
     }
 }

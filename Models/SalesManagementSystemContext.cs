@@ -31,6 +31,16 @@ public partial class SalesManagementSystemContext : IdentityDbContext<IdentityUs
 
     public virtual DbSet<SalesInvoiceItem> SalesInvoiceItems { get; set; }
 
+    public virtual DbSet<SalesReturn> SalesReturns { get; set; }
+
+    public virtual DbSet<SalesReturnItem> SalesReturnItems { get; set; }
+
+    public virtual DbSet<Refund> Refunds { get; set; }
+
+    public virtual DbSet<PurchaseRefund> PurchaseRefunds { get; set; }
+
+    public virtual DbSet<PurchaseRefundItem> PurchaseRefundItems { get; set; }
+
     public virtual DbSet<StockHistory> StockHistories { get; set; }
 
     public virtual DbSet<Supplier> Suppliers { get; set; }
@@ -40,7 +50,13 @@ public partial class SalesManagementSystemContext : IdentityDbContext<IdentityUs
     public virtual DbSet<VerificationCode> VerificationCodes { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseSqlServer("Server=.;Database=SalesManagementSystem;Trusted_Connection=True;TrustServerCertificate=True;");
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            throw new InvalidOperationException(
+                "Database provider and connection string must be configured by the application.");
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -66,6 +82,10 @@ public partial class SalesManagementSystemContext : IdentityDbContext<IdentityUs
 
         modelBuilder.Entity<Product>(entity =>
         {
+            entity.ToTable(table => table.HasCheckConstraint(
+                "CK_Products_StockQuantity_NonNegative",
+                "[StockQuantity] >= 0"));
+
             entity.HasKey(e => e.ProductId).HasName("PK__Products__B40CC6CDEF21BCA6");
 
             entity.Property(e => e.Description).HasMaxLength(255);
@@ -89,6 +109,10 @@ public partial class SalesManagementSystemContext : IdentityDbContext<IdentityUs
             entity.Property(e => e.TotalAmount).HasColumnType("decimal(12, 2)");
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.DeletedAt).HasColumnType("datetime");
+            entity.Property(e => e.RequestKey).HasMaxLength(64);
+            entity.HasIndex(e => e.RequestKey)
+                .IsUnique()
+                .HasFilter("[RequestKey] IS NOT NULL");
 
             entity.HasOne(d => d.Supplier).WithMany(p => p.PurchaseInvoices)
                 .HasForeignKey(d => d.SupplierId)
@@ -127,6 +151,10 @@ public partial class SalesManagementSystemContext : IdentityDbContext<IdentityUs
             entity.Property(e => e.TotalAmount).HasColumnType("decimal(12, 2)");
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.DeletedAt).HasColumnType("datetime");
+            entity.Property(e => e.RequestKey).HasMaxLength(64);
+            entity.HasIndex(e => e.RequestKey)
+                .IsUnique()
+                .HasFilter("[RequestKey] IS NOT NULL");
 
             entity.HasOne(d => d.Customer).WithMany(p => p.SalesInvoices)
                 .HasForeignKey(d => d.CustomerId)
@@ -155,6 +183,106 @@ public partial class SalesManagementSystemContext : IdentityDbContext<IdentityUs
                 .HasConstraintName("FK_SalesItem_Invoice");
         });
 
+        modelBuilder.Entity<SalesReturn>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.ReturnDate).HasColumnType("datetime");
+            entity.Property(e => e.TotalAmount).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.RequestKey).HasMaxLength(64);
+            entity.HasIndex(e => e.RequestKey)
+                .IsUnique()
+                .HasFilter("[RequestKey] IS NOT NULL");
+
+            entity.HasOne<SalesInvoice>()
+                .WithMany()
+                .HasForeignKey(e => e.InvoiceId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SalesReturn_Invoice");
+        });
+
+        modelBuilder.Entity<SalesReturnItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.UnitPrice).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.Total).HasColumnType("decimal(21, 2)");
+            entity.HasIndex(e => new { e.SalesReturnId, e.InvoiceItemId }).IsUnique();
+
+            entity.HasOne<SalesInvoiceItem>()
+                .WithMany()
+                .HasForeignKey(e => e.InvoiceItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SalesReturnItem_InvoiceItem");
+
+            entity.HasOne(e => e.SalesReturn)
+                .WithMany(salesReturn => salesReturn.Items)
+                .HasForeignKey(e => e.SalesReturnId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Refund>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Amount).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.RefundDate).HasColumnType("datetime");
+            entity.Property(e => e.ReferenceNumber).HasMaxLength(100);
+
+            entity.HasOne(e => e.Invoice)
+                .WithMany(invoice => invoice.Refunds)
+                .HasForeignKey(e => e.InvoiceId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Refund_Invoice");
+
+            entity.HasOne(e => e.SalesReturn)
+                .WithMany(salesReturn => salesReturn.Refunds)
+                .HasForeignKey(e => e.SalesReturnId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Refund_SalesReturn");
+
+            entity.HasIndex(e => e.SalesReturnId).IsUnique();
+        });
+
+        modelBuilder.Entity<PurchaseRefund>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.TotalAmount).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.RefundDate).HasColumnType("datetime");
+            entity.Property(e => e.RequestKey).HasMaxLength(64);
+            entity.Property(e => e.ReferenceNumber).HasMaxLength(100);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.HasIndex(e => e.RequestKey)
+                .IsUnique()
+                .HasFilter("[RequestKey] IS NOT NULL");
+
+            entity.HasOne(e => e.PurchaseInvoice)
+                .WithMany(invoice => invoice.Refunds)
+                .HasForeignKey(e => e.PurchaseInvoiceId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PurchaseRefund_Invoice");
+        });
+
+        modelBuilder.Entity<PurchaseRefundItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.UnitPrice).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.Total).HasColumnType("decimal(21, 2)");
+            entity.HasIndex(e => new { e.PurchaseRefundId, e.PurchaseInvoiceItemId }).IsUnique();
+
+            entity.HasOne(e => e.PurchaseRefund)
+                .WithMany(refund => refund.Items)
+                .HasForeignKey(e => e.PurchaseRefundId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne<PurchaseInvoiceItem>()
+                .WithMany()
+                .HasForeignKey(e => e.PurchaseInvoiceItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<StockHistory>(entity =>
         {
             entity.HasKey(e => e.StockHistoryId).HasName("PK__StockHis__A6CE86FB43ECF17D");
@@ -166,11 +294,40 @@ public partial class SalesManagementSystemContext : IdentityDbContext<IdentityUs
                 .HasColumnType("datetime");
             entity.Property(e => e.MovementType).HasMaxLength(10);
             entity.Property(e => e.Notes).HasMaxLength(255);
+            entity.HasIndex(e => new { e.SalesInvoiceId, e.ProductId })
+                .IsUnique()
+                .HasFilter("[SalesInvoiceId] IS NOT NULL");
+            entity.HasIndex(e => new { e.PurchaseInvoiceId, e.ProductId })
+                .IsUnique()
+                .HasFilter("[PurchaseInvoiceId] IS NOT NULL");
+            entity.HasIndex(e => new { e.SalesReturnId, e.ProductId })
+                .IsUnique()
+                .HasFilter("[SalesReturnId] IS NOT NULL");
+            entity.HasIndex(e => new { e.PurchaseRefundId, e.ProductId })
+                .IsUnique()
+                .HasFilter("[PurchaseRefundId] IS NOT NULL");
 
             entity.HasOne(d => d.Product).WithMany(p => p.StockHistories)
                 .HasForeignKey(d => d.ProductId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StockHistory_Product");
+
+            entity.HasOne<SalesInvoice>()
+                .WithMany()
+                .HasForeignKey(e => e.SalesInvoiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<PurchaseInvoice>()
+                .WithMany()
+                .HasForeignKey(e => e.PurchaseInvoiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<SalesReturn>()
+                .WithMany()
+                .HasForeignKey(e => e.SalesReturnId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<PurchaseRefund>()
+                .WithMany()
+                .HasForeignKey(e => e.PurchaseRefundId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Supplier>(entity =>
@@ -191,6 +348,13 @@ public partial class SalesManagementSystemContext : IdentityDbContext<IdentityUs
             entity.Property(e => e.Status).HasMaxLength(20);
             entity.Property(e => e.ReferenceNumber).HasMaxLength(100);
             entity.Property(e => e.StripePaymentIntentId).HasMaxLength(100);
+            entity.Property(e => e.IdempotencyKey).HasMaxLength(64);
+            entity.HasIndex(e => e.IdempotencyKey)
+                .IsUnique()
+                .HasFilter("[IdempotencyKey] IS NOT NULL");
+            entity.HasIndex(e => e.StripePaymentIntentId)
+                .IsUnique()
+                .HasFilter("[StripePaymentIntentId] IS NOT NULL");
 
             entity.HasOne(d => d.SalesInvoice)
                   .WithMany()

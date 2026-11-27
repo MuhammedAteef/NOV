@@ -6,14 +6,18 @@
 }
 
 <div class="container my-4" style="max-width: 900px;">
-    <!-- Navigation Back Link -->
+
     <div class="mb-3">
         <a asp-page="./Index" class="text-decoration-none text-secondary d-inline-flex align-items-center gap-1">
             <i class="bi bi-arrow-left"></i> Back to Purchase Invoices
         </a>
     </div>
 
-    <!-- Page Header -->
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div asp-validation-summary="All" class="alert alert-danger small mb-3"></div>
+    }
+
     <div class="d-flex align-items-center gap-3 mb-4">
         <div>
             <h2 class="fw-bold text-dark mb-0">Purchase Invoice Details</h2>
@@ -35,7 +39,7 @@
 
     @if (isDeleted)
     {
-        <!-- Already-deleted warning banner -->
+
         <div class="alert alert-warning d-flex align-items-center gap-2 mb-4" role="alert">
             <i class="bi bi-exclamation-triangle-fill fs-5"></i>
             <div>
@@ -46,7 +50,7 @@
         </div>
     }
 
-    <!-- ── INVOICE HEADER CARD ── -->
+
     <div class="card shadow-sm border-0 rounded-3 mb-4 @(isDeleted ? "border-danger border opacity-75" : "")">
         <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
             <h5 class="fw-bold mb-0">
@@ -59,24 +63,24 @@
         </div>
         <div class="card-body p-4 @(isDeleted ? "text-muted" : "")">
             <div class="row g-3">
-                <!-- Invoice ID -->
+
                 <div class="col-md-3">
                     <p class="text-muted small mb-1 fw-semibold text-uppercase">Invoice ID</p>
                     <p class="fw-bold fs-5 mb-0 @(isDeleted ? "text-decoration-line-through" : "")">
                         #@Model.Invoice.PurchaseInvoiceId
                     </p>
                 </div>
-                <!-- Supplier -->
+
                 <div class="col-md-3">
                     <p class="text-muted small mb-1 fw-semibold text-uppercase">Supplier</p>
                     <p class="fw-bold fs-5 mb-0">@Model.Invoice.Supplier?.Name</p>
                 </div>
-                <!-- Invoice Date -->
+
                 <div class="col-md-3">
                     <p class="text-muted small mb-1 fw-semibold text-uppercase">Invoice Date</p>
                     <p class="fw-bold fs-5 mb-0">@Model.Invoice.InvoiceDate.ToString("yyyy-MM-dd")</p>
                 </div>
-                <!-- Deleted At (only shown if deleted) -->
+
                 @if (isDeleted)
                 {
                     <div class="col-md-3">
@@ -90,7 +94,7 @@
         </div>
     </div>
 
-    <!-- ── LINE ITEMS CARD ── -->
+
     <div class="card shadow-sm border-0 rounded-3 mb-4">
         <div class="card-header bg-white py-3 border-bottom">
             <h5 class="fw-bold mb-0">
@@ -159,7 +163,7 @@
         </div>
     </div>
 
-    <!-- ── ACTION BUTTONS ── -->
+
     <div class="d-flex justify-content-end gap-2">
         <a asp-page="./Index" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i> Back to List
@@ -167,23 +171,43 @@
 
         @if (!isDeleted)
         {
-            <!-- Confirm Delete button — submits POST with id in route -->
             <form method="post" asp-route-id="@Model.Invoice.PurchaseInvoiceId" id="deleteForm">
-                <button type="button" class="btn btn-danger px-4"
-                        onclick="confirmDelete()">
+                <button type="button" class="btn btn-danger px-4" data-bs-toggle="modal"
+                        data-bs-target="#purchaseInvoiceDeleteModal">
                     <i class="bi bi-trash me-1"></i> Confirm Delete
                 </button>
             </form>
+
+            <div class="modal fade" id="purchaseInvoiceDeleteModal" tabindex="-1"
+                 aria-labelledby="purchaseInvoiceDeleteModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content rounded-4 border-0 shadow">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title fw-bold" id="purchaseInvoiceDeleteModalLabel">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>Delete Purchase Invoice?
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Delete purchase invoice <strong>#@Model.Invoice.PurchaseInvoiceId</strong>?</p>
+                            <p class="mb-0">
+                                The invoice and its items will be marked unavailable. Quantities not already refunded
+                                will be removed from stock. Payment and refund history will be kept. Deletion is blocked
+                                if stock is insufficient. This action cannot be undone.
+                            </p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                Cancel
+                            </button>
+                            <button type="submit" form="deleteForm" class="btn btn-danger">
+                                <i class="bi bi-trash me-1"></i> Delete Invoice
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         }
     </div>
 </div>
-
-@section Scripts {
-    <script>
-        function confirmDelete() {
-            if (confirm('Are you sure you want to delete this invoice?\n\nThis will:\n• Mark the invoice and all its items as Unavailable\n• Reverse stock quantities for all products\n• Log the reversal in Stock History\n\nThis action cannot be undone.')) {
-                document.getElementById('deleteForm').submit();
-            }
-        }
-    </script>
-}

@@ -5,6 +5,8 @@
     'use strict';
 
     window.initInvoiceEdit = function (config) {
+        const formatCurrency = window.invoiceCurrency.format;
+        const parseCurrency = window.invoiceCurrency.parse;
         const products = config.products || [];
         const existingItems = config.existingItems || [];
         const itemIdFieldName = config.itemIdFieldName || 'ItemId';
@@ -152,14 +154,6 @@
             const msg  = document.getElementById('noRowsMsg');
             if (!body || !msg) return;
             msg.style.display = body.rows.length > 0 ? 'none' : 'block';
-        }
-
-        function formatCurrency(value) {
-            return '$' + value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        }
-
-        function parseCurrency(str) {
-            return parseFloat(str.replace(/[$,]/g, '')) || 0;
         }
 
         // Form validation

@@ -13,6 +13,8 @@ public partial class SalesInvoice
 
     public decimal TotalAmount { get; set; }
 
+    public string? RequestKey { get; set; }
+
     public bool IsDeleted { get; set; } = false;
 
     public DateTime? DeletedAt { get; set; }
@@ -20,4 +22,6 @@ public partial class SalesInvoice
     public virtual Customer Customer { get; set; } = null!;
 
     public virtual ICollection<SalesInvoiceItem> SalesInvoiceItems { get; set; } = new List<SalesInvoiceItem>();
+
+    public ICollection<Refund> Refunds { get; set; } = new List<Refund>();
 }

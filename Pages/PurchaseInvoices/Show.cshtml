@@ -15,7 +15,7 @@
 
 <div class="container my-4" style="max-width: 780px;">
 
-    <!-- ── ALERT MESSAGES ── -->
+
     @if (TempData["SuccessMessage"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show mb-4 rounded-3 no-print" role="alert">
@@ -34,7 +34,7 @@
         </div>
     }
 
-    <!-- ── TOP ACTION BAR (hidden on print) ── -->
+
     <div class="d-flex justify-content-between align-items-center mb-4 no-print">
         <a asp-page="./Index" class="text-decoration-none text-secondary d-inline-flex align-items-center gap-1">
             <i class="bi bi-arrow-left"></i> Back to Purchase Invoices
@@ -48,12 +48,16 @@
                         <i class="bi bi-cash-coin me-1"></i> Pay Remaining ($@Model.Remaining.ToString("N2"))
                     </button>
                 }
-                <a asp-page="./Edit" asp-route-id="@Model.Invoice.PurchaseInvoiceId" class="btn btn-outline-primary btn-sm rounded-pill px-3">
-                    <i class="bi bi-pencil me-1"></i> Edit
+                <a asp-page="./Refund" asp-route-id="@Model.Invoice.PurchaseInvoiceId" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                    <i class="bi bi-arrow-return-left me-1"></i> Refund to Supplier
                 </a>
-                <a asp-page="./Delete" asp-route-id="@Model.Invoice.PurchaseInvoiceId" class="btn btn-outline-danger btn-sm rounded-pill px-3">
-                    <i class="bi bi-trash me-1"></i> Delete
-                </a>
+                @if (User.IsInRole("Admin"))
+                {
+                    <a asp-page="./Delete" asp-route-id="@Model.Invoice.PurchaseInvoiceId"
+                       class="btn btn-outline-danger btn-sm rounded-pill px-3" title="Delete Invoice">
+                        <i class="bi bi-trash-fill me-1" aria-hidden="true"></i> Delete
+                    </a>
+                }
             }
             <button onclick="window.print()" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
                 <i class="bi bi-printer me-1"></i> Print
@@ -61,22 +65,22 @@
         </div>
     </div>
 
-    <!-- ── RECEIPT CARD ── -->
+
     <div class="card shadow border-0 rounded-4 receipt-wrapper @(isDeleted ? "border border-danger" : "")">
 
-        <!-- WATERMARK for deleted invoices -->
+
         @if (isDeleted)
         {
             <div class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center"
                  style="top:0;left:0;pointer-events:none;z-index:0;opacity:.08;">
-                <span style="font-size:8rem;font-weight:900;color:#dc3545;transform:rotate(-30deg);
+                <span style="font-size:8rem;font-weight:900;color:#DC2626;transform:rotate(-30deg);
                              white-space:nowrap;user-select:none;">DELETED</span>
             </div>
         }
 
         <div class="card-body p-5 position-relative" style="z-index:1;">
 
-            <!-- ── RECEIPT HEADER ── -->
+
             <div class="d-flex justify-content-between align-items-start mb-4">
                 <div>
                     <h3 class="fw-bold mb-0 text-dark">Purchase Invoice</h3>
@@ -106,7 +110,7 @@
 
             <hr class="my-3" />
 
-            <!-- ── INVOICE META ── -->
+
             <div class="row g-3 mb-4">
                 <div class="col-sm-4">
                     <p class="text-muted small fw-semibold text-uppercase mb-1">Invoice No.</p>
@@ -131,8 +135,9 @@
 
             <hr class="my-3" />
 
-            <!-- ── LINE ITEMS TABLE ── -->
-            <table class="table align-middle mb-0">
+
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
                 <thead>
                     <tr class="border-bottom border-2">
                         <th class="text-muted small fw-semibold text-uppercase">Product</th>
@@ -162,11 +167,12 @@
                         </tr>
                     }
                 </tbody>
-            </table>
+                </table>
+            </div>
 
             <hr class="my-3" />
 
-            <!-- ── TOTALS & PAYMENTS SUMMARY ── -->
+
             <div class="d-flex justify-content-end">
                 <div style="min-width: 280px;">
                     <div class="d-flex justify-content-between mb-2">
@@ -188,7 +194,7 @@
                 </div>
             </div>
 
-            <!-- ── PAYMENT RECORDS HISTORY TABLE ── -->
+
             @if (Model.Payments.Any())
             {
                 <hr class="my-4" />
@@ -230,17 +236,48 @@
                 </div>
             }
 
-            <!-- ── FOOTER NOTE ── -->
+            @if (Model.Refunds.Any())
+            {
+                <hr class="my-4" />
+                <h6 class="fw-bold text-dark mb-3">
+                    <i class="bi bi-arrow-return-left me-2 text-primary"></i>Purchase Refund History
+                </h6>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light text-muted small">
+                            <tr>
+                                <th class="ps-3">Refund Date</th>
+                                <th>Returned Units</th>
+                                <th>Reference</th>
+                                <th class="text-end pe-3">Refund Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var refund in Model.Refunds)
+                            {
+                                <tr>
+                                    <td class="ps-3 small">@refund.RefundDate.ToString("MMM dd, yyyy HH:mm")</td>
+                                    <td>@refund.Items.Sum(item => item.Quantity)</td>
+                                    <td>@(string.IsNullOrWhiteSpace(refund.ReferenceNumber) ? "—" : refund.ReferenceNumber)</td>
+                                    <td class="text-end pe-3 fw-semibold">$@refund.TotalAmount.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+
             <div class="mt-5 pt-3 border-top text-center text-muted small">
                 <p class="mb-0">Generated by <strong>Novix ERP — System Management</strong></p>
                 <p class="mb-0">Printed on @DateTime.Now.ToString("dd MMM yyyy HH:mm")</p>
             </div>
 
-        </div><!-- /card-body -->
-    </div><!-- /card -->
+        </div>
+    </div>
 </div>
 
-<!-- ── PAY REMAINING MODAL ── -->
+
 @if (!isDeleted && Model.Remaining > 0)
 {
     <div class="modal fade" id="payRemainingModal" tabindex="-1" aria-labelledby="payRemainingModalLabel" aria-hidden="true">
@@ -255,6 +292,7 @@
                 <form method="post" asp-page-handler="PayRemaining" id="payRemainingForm">
                     <input type="hidden" name="id" value="@Model.Invoice.PurchaseInvoiceId" />
                     <input type="hidden" asp-for="StripePaymentIntentId" id="modalStripePaymentIntentId" />
+                    <input type="hidden" asp-for="PaymentRequestKey" />
                     @Html.AntiForgeryToken()
 
                     <div class="modal-body p-4">
@@ -274,14 +312,14 @@
                             </div>
                         </div>
 
-                        <!-- Pay Amount Input -->
+
                         <div class="mb-3">
                             <label asp-for="PayAmount" class="form-label fw-semibold">Payment Amount ($)</label>
                             <input asp-for="PayAmount" type="number" step="0.01" min="0.01" max="@Model.Remaining" id="modalPayAmount" class="form-control rounded-3" value="@Model.Remaining.ToString("F2")" required />
                             <small class="text-muted">You can pay full remaining or a partial amount.</small>
                         </div>
 
-                        <!-- Payment Method Select -->
+
                         <div class="mb-3">
                             <label asp-for="PaymentMethod" class="form-label fw-semibold">Payment Method</label>
                             <select asp-for="PaymentMethod" id="modalPaymentMethod" class="form-select rounded-3" required onchange="toggleModalStripe(this.value)">
@@ -290,8 +328,8 @@
                             </select>
                         </div>
 
-                        <!-- Stripe Card Container inside Modal -->
-                        <div class="mb-3" id="modalStripeCardContainer" style="display:none;">
+
+                        <div class="mb-3" id="modalStripeCardContainer" data-stripe-key="@Model.StripePublishableKey" style="display:none;">
                             <label class="form-label fw-semibold">Stripe Card Details</label>
                             <div id="modal-card-element" class="form-control p-3 bg-white border rounded-3"></div>
                             
@@ -316,148 +354,5 @@
 
 @section Scripts {
     <script src="https://js.stripe.com/v3/"></script>
-    <script>
-        const stripeKey = '@Model.StripePublishableKey';
-        let stripe = null;
-        let elements = null;
-        let modalCardElement = null;
-        let isModalCardMounted = false;
-
-        function showModalCardError(msg) {
-            const alertBox = document.getElementById('modal-card-alert');
-            const errorSpan = document.getElementById('modal-card-error-msg');
-            if (alertBox && errorSpan) {
-                errorSpan.textContent = msg;
-                alertBox.style.display = 'flex';
-            }
-        }
-
-        function clearModalCardError() {
-            const alertBox = document.getElementById('modal-card-alert');
-            const errorSpan = document.getElementById('modal-card-error-msg');
-            if (alertBox && errorSpan) {
-                errorSpan.textContent = '';
-                alertBox.style.display = 'none';
-            }
-        }
-
-        function mountModalStripeCard() {
-            if (!stripeKey || typeof Stripe === 'undefined') return;
-            const container = document.getElementById('modalStripeCardContainer');
-            if (!container || container.style.display === 'none') return;
-
-            if (!stripe) {
-                stripe = Stripe(stripeKey);
-                elements = stripe.elements();
-                modalCardElement = elements.create('card', {
-                    style: {
-                        base: {
-                            fontSize: '16px',
-                            color: '#0F172A',
-                            fontFamily: 'system-ui, -apple-system, sans-serif',
-                            '::placeholder': { color: '#94A3B8' }
-                        },
-                        invalid: { color: '#EF4444' }
-                    }
-                });
-                modalCardElement.on('change', e => {
-                    if (e.error) showModalCardError(e.error.message);
-                    else clearModalCardError();
-                });
-            }
-
-            if (!isModalCardMounted) {
-                modalCardElement.mount('#modal-card-element');
-                isModalCardMounted = true;
-            }
-        }
-
-        function toggleModalStripe(val) {
-            const container = document.getElementById('modalStripeCardContainer');
-            if (container) {
-                container.style.display = val === 'Card' ? 'block' : 'none';
-                if (val === 'Card') {
-                    setTimeout(mountModalStripeCard, 100);
-                } else {
-                    clearModalCardError();
-                }
-            }
-        }
-
-        const payForm = document.getElementById('payRemainingForm');
-        if (payForm) {
-            payForm.addEventListener('submit', async function(e) {
-                const method = document.getElementById('modalPaymentMethod').value;
-                const intentInput = document.getElementById('modalStripePaymentIntentId');
-
-                if (method === 'Card' && intentInput && !intentInput.value) {
-                    e.preventDefault();
-                    clearModalCardError();
-
-                    const btn = document.getElementById('confirmPayBtn');
-                    if (btn) {
-                        btn.disabled = true;
-                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing Card…';
-                    }
-
-                    const payAmountInput = document.getElementById('modalPayAmount');
-                    const amount = parseFloat(payAmountInput ? payAmountInput.value : '0');
-
-                    if (!amount || amount <= 0) {
-                        showModalCardError('Please enter a valid payment amount.');
-                        if (btn) {
-                            btn.disabled = false;
-                            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Process Payment';
-                        }
-                        return;
-                    }
-
-                    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
-                    try {
-                        const intentRes = await fetch('?handler=CreateIntent', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded',
-                                'RequestVerificationToken': token
-                            },
-                            body: new URLSearchParams({ amount: amount.toString() })
-                        });
-
-                        const intentData = await intentRes.json();
-                        if (intentData.error) {
-                            showModalCardError(intentData.error);
-                            if (btn) {
-                                btn.disabled = false;
-                                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Process Payment';
-                            }
-                            return;
-                        }
-
-                        const { error, paymentIntent } = await stripe.confirmCardPayment(intentData.clientSecret, {
-                            payment_method: { card: modalCardElement }
-                        });
-
-                        if (error) {
-                            showModalCardError(error.message);
-                            if (btn) {
-                                btn.disabled = false;
-                                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Process Payment';
-                            }
-                            return;
-                        }
-
-                        intentInput.value = paymentIntent.id;
-                        payForm.submit();
-
-                    } catch (err) {
-                        showModalCardError('An unexpected error occurred during card processing.');
-                        if (btn) {
-                            btn.disabled = false;
-                            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Process Payment';
-                        }
-                    }
-                }
-            });
-        }
-    </script>
+    <script src="~/js/invoice-payment.js" asp-append-version="true"></script>
 }

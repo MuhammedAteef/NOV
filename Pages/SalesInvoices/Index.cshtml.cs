@@ -40,19 +40,16 @@ public class IndexModel : PageModel
 
         var invoices = await _unitOfWork.SalesInvoices.GetAllWithCustomerAsync();
 
-        // 1. Filter by Customer ID
         if (CustomerId.HasValue && CustomerId.Value > 0)
         {
             invoices = invoices.Where(i => i.CustomerId == CustomerId.Value).ToList();
         }
 
-        // 2. Filter by Invoice ID
         if (InvoiceId.HasValue && InvoiceId.Value > 0)
         {
             invoices = invoices.Where(i => i.SalesInvoiceId == InvoiceId.Value).ToList();
         }
 
-        // 3. Search Term (Invoice # or Customer Name)
         if (!string.IsNullOrWhiteSpace(SearchTerm))
         {
             string term = SearchTerm.Trim();
@@ -67,7 +64,6 @@ public class IndexModel : PageModel
             }
         }
 
-        // 4. Filter by Status
         if (!string.IsNullOrWhiteSpace(Status))
         {
             if (Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) || Status.Equals("Active", StringComparison.OrdinalIgnoreCase))
@@ -80,7 +76,6 @@ public class IndexModel : PageModel
             }
         }
 
-        // 5. Filter by Selected Date
         if (SelectedDate.HasValue)
         {
             invoices = invoices.Where(i => i.InvoiceDate.Date == SelectedDate.Value.Date).ToList();

@@ -1,72 +1,142 @@
 using Stripe;
 using SystemManagementSystem.Models;
-using SystemManagementSystem.Repositories;
 
 namespace SystemManagementSystem.Services;
 
 public class PaymentService : IPaymentService
 {
-    private readonly IUnitOfWork _unitOfWork;
     private readonly IConfiguration _config;
 
-    public PaymentService(IUnitOfWork unitOfWork, IConfiguration config)
+    public PaymentService(IConfiguration config)
     {
-        _unitOfWork = unitOfWork;
         _config = config;
     }
 
-    public async Task<(string clientSecret, string intentId)> CreateStripePaymentIntentAsync(decimal amount)
+    public async Task<(string clientSecret, string intentId)> CreateStripePaymentIntentAsync(
+        decimal amount,
+        string? idempotencyKey = null)
     {
-        StripeConfiguration.ApiKey = _config["Stripe:SecretKey"];
+        var amountInMinorUnits = ToMinorUnits(amount);
+        StripeConfiguration.ApiKey = GetSecretKey();
 
         var options = new PaymentIntentCreateOptions
         {
-            Amount = (long)(amount * 100),
+            Amount = amountInMinorUnits,
             Currency = "usd",
             PaymentMethodTypes = new List<string> { "card" },
+            CaptureMethod = "manual",
         };
 
         var service = new PaymentIntentService();
-        var intent = await service.CreateAsync(options);
+        var requestOptions = string.IsNullOrWhiteSpace(idempotencyKey)
+            ? null
+            : new RequestOptions { IdempotencyKey = idempotencyKey };
+        var intent = await service.CreateAsync(options, requestOptions);
         return (intent.ClientSecret, intent.Id);
     }
 
-    public async Task<Models.Payment> ProcessInvoicePaymentAsync(
-        int? salesInvoiceId,
-        int? purchaseInvoiceId,
-        decimal amount,
-        string paymentMethod,
-        string? stripePaymentIntentId = null)
+    public async Task<bool> IsStripePaymentIntentReadyAsync(
+        string? paymentIntentId,
+        decimal expectedAmount)
     {
-        if (paymentMethod != "Cash" && paymentMethod != "Card")
+        if (string.IsNullOrWhiteSpace(paymentIntentId) ||
+            expectedAmount <= 0 ||
+            decimal.Round(expectedAmount, 2) != expectedAmount)
         {
-            throw new ArgumentException("Invalid payment method. Expected 'Cash' or 'Card'.");
+            return false;
         }
 
-        string refNum = (paymentMethod == "Card" ? stripePaymentIntentId ?? "" : $"CASH-{DateTime.Now:yyyyMMddHHmmss}");
+        StripeConfiguration.ApiKey = GetSecretKey();
+        var intent = await new PaymentIntentService().GetAsync(paymentIntentId);
 
-        var payment = new Models.Payment
-        {
-            SalesInvoiceId = salesInvoiceId,
-            PurchaseInvoiceId = purchaseInvoiceId,
-            Amount = amount,
-            PaymentDate = DateTime.Now,
-            PaymentMethod = paymentMethod,
-            Status = "Paid",
-            ReferenceNumber = refNum,
-            StripePaymentIntentId = stripePaymentIntentId,
-        };
-
-        await _unitOfWork.Payments.AddAsync(payment);
-        await _unitOfWork.SaveChangesAsync();
-        return payment;
+        var expectedAmountInMinorUnits = ToMinorUnits(expectedAmount);
+        return intent.Amount == expectedAmountInMinorUnits &&
+            string.Equals(intent.Currency, "usd", StringComparison.OrdinalIgnoreCase) &&
+            (intent.Status == "requires_capture" &&
+                intent.AmountCapturable == expectedAmountInMinorUnits ||
+                intent.Status == "succeeded" && intent.AmountReceived == expectedAmountInMinorUnits);
     }
-    public async Task<string> PaymentStatusAsync(string paymentIntentId)
+
+    public async Task CaptureStripePaymentIntentAsync(string paymentIntentId, decimal expectedAmount)
     {
+        StripeConfiguration.ApiKey = GetSecretKey();
+
         var service = new PaymentIntentService();
+        var intent = await service.GetAsync(paymentIntentId);
+        if (intent.Amount != ToMinorUnits(expectedAmount) ||
+            !string.Equals(intent.Currency, "usd", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("The Stripe payment amount does not match the invoice total.");
+        }
 
-        var payIntent = await service.GetAsync(paymentIntentId);
+        if (intent.Status == "succeeded")
+        {
+            if (intent.AmountReceived != ToMinorUnits(expectedAmount))
+            {
+                throw new InvalidOperationException("Stripe did not confirm the full invoice payment.");
+            }
 
-        return payIntent.Status;
+            return;
+        }
+
+        if (intent.Status != "requires_capture")
+        {
+            throw new InvalidOperationException("The Stripe payment is not authorized for capture.");
+        }
+
+        var capturedIntent = await service.CaptureAsync(paymentIntentId);
+        if (capturedIntent.Status != "succeeded" ||
+            capturedIntent.AmountReceived != ToMinorUnits(expectedAmount))
+        {
+            throw new InvalidOperationException("Stripe did not confirm the full invoice payment.");
+        }
+    }
+
+    public async Task CancelStripePaymentIntentAsync(string paymentIntentId)
+    {
+        StripeConfiguration.ApiKey = GetSecretKey();
+        var service = new PaymentIntentService();
+        var intent = await service.GetAsync(paymentIntentId);
+        if (intent.Status == "requires_capture")
+        {
+            await service.CancelAsync(paymentIntentId);
+        }
+    }
+
+    public async Task RefundCapturedPaymentIntentAsync(string paymentIntentId)
+    {
+        StripeConfiguration.ApiKey = GetSecretKey();
+        var service = new PaymentIntentService();
+        var intent = await service.GetAsync(paymentIntentId);
+        if (intent.Status != "succeeded")
+        {
+            return;
+        }
+
+        await new RefundService().CreateAsync(new RefundCreateOptions
+        {
+            PaymentIntent = paymentIntentId
+        });
+    }
+
+    private string GetSecretKey()
+    {
+        var secretKey = _config["Stripe:SecretKey"];
+        if (string.IsNullOrWhiteSpace(secretKey))
+        {
+            throw new InvalidOperationException("Stripe:SecretKey is not configured.");
+        }
+
+        return secretKey;
+    }
+
+    private static long ToMinorUnits(decimal amount)
+    {
+        if (amount <= 0 || decimal.Round(amount, 2) != amount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), "Payment amounts must be positive and have at most two decimal places.");
+        }
+
+        return decimal.ToInt64(amount * 100m);
     }
 }

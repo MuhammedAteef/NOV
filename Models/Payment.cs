@@ -15,6 +15,7 @@ public class Payment
     public string? ReferenceNumber { get; set; }
 
     public string? StripePaymentIntentId { get; set; }
+    public string? IdempotencyKey { get; set; }
 
     public int? SalesInvoiceId { get; set; }
     public int? PurchaseInvoiceId { get; set; }
