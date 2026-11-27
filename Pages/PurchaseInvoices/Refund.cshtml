@@ -1,0 +1,99 @@
+@page "{id:int}"
+@model SystemManagementSystem.Pages.PurchaseInvoices.RefundModel
+@{
+    ViewData["Title"] = "Refund Purchase Invoice";
+}
+
+<div class="container my-4" style="max-width: 900px;">
+    <div class="mb-3">
+        <a asp-page="./Show" asp-route-id="@Model.Invoice.PurchaseInvoiceId"
+           class="text-decoration-none text-secondary d-inline-flex align-items-center gap-1">
+            <i class="bi bi-arrow-left"></i> Back to Purchase Invoice
+        </a>
+    </div>
+
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-danger" role="alert">@errorMessage</div>
+    }
+
+    <div class="mb-4">
+        <h2 class="fw-bold text-dark mb-0">Refund Products to Supplier</h2>
+        <p class="text-muted small mb-0">
+            The original purchase invoice stays unchanged. Returned quantities reduce inventory.
+        </p>
+    </div>
+
+    <form method="post">
+        <input type="hidden" asp-for="RequestKey" />
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div asp-validation-summary="All" class="alert alert-danger small mb-3"></div>
+        }
+
+        <div class="card shadow-sm border-0 rounded-3 mb-4">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h5 class="fw-bold mb-0">Invoice #@Model.Invoice.PurchaseInvoiceId</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-1"><strong>Supplier:</strong> @Model.Invoice.Supplier.Name</p>
+                <p class="mb-0"><strong>Date:</strong> @Model.Invoice.InvoiceDate.ToString("d")</p>
+                <label asp-for="Notes" class="form-label fw-semibold mt-3">Notes (optional)</label>
+                <textarea asp-for="Notes" class="form-control" rows="2" maxlength="500"></textarea>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-3 mb-4">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h5 class="fw-bold mb-0">Purchased Items</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Product</th>
+                            <th>Purchased</th>
+                            <th>Previously refunded</th>
+                            <th>In stock</th>
+                            <th>Refund quantity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var index = 0; index < Model.ExistingItems.Count; index++)
+                        {
+                            var item = Model.ExistingItems[index];
+                            var refunded = Model.PreviouslyRefundedQuantities.GetValueOrDefault(item.PurchaseItemId);
+                            var refundable = Math.Max(item.Quantity - refunded, 0);
+                            var quantity = Model.LineItems?
+                                .FirstOrDefault(line => line.PurchaseItemId == item.PurchaseItemId)?.Quantity ?? 0;
+                            <tr>
+                                <td class="ps-4">
+                                    @(item.Product?.Name ?? $"Product #{item.ProductId}")
+                                    <input type="hidden" name="LineItems[@index].PurchaseItemId"
+                                           value="@item.PurchaseItemId" />
+                                </td>
+                                <td>@item.Quantity</td>
+                                <td>@refunded</td>
+                                <td>@item.Product?.StockQuantity</td>
+                                <td>
+                                    <input type="number" name="LineItems[@index].Quantity"
+                                           class="form-control form-control-sm" min="0" max="@refundable" value="@quantity"
+                                           aria-label="Refund quantity for @(item.Product?.Name ?? $"product {item.ProductId}")" />
+                                    <small class="text-muted">Max: @refundable</small>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+            <a asp-page="./Show" asp-route-id="@Model.Invoice.PurchaseInvoiceId"
+               class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary px-4">
+                <i class="bi bi-arrow-return-left me-1"></i> Record Purchase Refund
+            </button>
+        </div>
+    </form>
+</div>

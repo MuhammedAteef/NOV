@@ -4,14 +4,14 @@
     ViewData["Title"] = "Edit Product";
 }
 <div class="container my-4" style="max-width: 600px;">
-    <!-- Navigation Back Link -->
+
     <div class="mb-3">
         <a asp-page="./Index" class="text-decoration-none text-secondary d-inline-flex align-items-center gap-1">
             <i class="bi bi-arrow-left"></i> Back to Products
         </a>
     </div>
 
-    <!-- Main Card -->
+
     <div class="card shadow-sm border-0 rounded-3">
         <div class="card-header bg-white py-3 border-0">
             <h3 class="fw-bold text-dark mb-0">Edit Product</h3>
@@ -22,21 +22,21 @@
                 <input type="hidden" asp-for="Product.ProductId" />
                 <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
 
-                <!-- Product Name Field -->
+
                 <div class="mb-3">
                     <label asp-for="Product.Name" class="form-label fw-semibold">Product Name</label>
                     <input asp-for="Product.Name" class="form-control" placeholder="e.g. Wireless Mouse" required />
                     <span asp-validation-for="Product.Name" class="text-danger small"></span>
                 </div>
 
-                <!-- Description Field -->
+
                 <div class="mb-3">
                     <label asp-for="Product.Description" class="form-label fw-semibold">Description</label>
                     <input asp-for="Product.Description" class="form-control" placeholder="e.g. Brief product description" />
                     <span asp-validation-for="Product.Description" class="text-danger small"></span>
                 </div>
 
-                <!-- Category Field -->
+
                 <div class="mb-3">
                     <label asp-for="Product.CategoryId" class="form-label fw-semibold">Category</label>
                     <select asp-for="Product.CategoryId" asp-items="Model.CategoryList" class="form-select" required>
@@ -46,27 +46,26 @@
                 </div>
 
                 <div class="row">
-                    <!-- Purchase Price Field -->
+
                     <div class="col-md-6 mb-3">
                         <label asp-for="Product.PurchasePrice" class="form-label fw-semibold">Purchase Price</label>
                         <input asp-for="Product.PurchasePrice" class="form-control" type="number" step="0.01" min="0" />
                     </div>
 
-                    <!-- Selling Price Field -->
+
                     <div class="col-md-6 mb-3">
                         <label asp-for="Product.SellingPrice" class="form-label fw-semibold">Selling Price</label>
                         <input asp-for="Product.SellingPrice" class="form-control" type="number" step="0.01" min="0" />
                     </div>
                 </div>
 
-                <!-- Stock Quantity Field -->
                 <div class="mb-3">
-                    <label asp-for="Product.StockQuantity" class="form-label fw-semibold">Stock Quantity</label>
-                    <input asp-for="Product.StockQuantity" class="form-control" type="number" min="0" required />
-                    <span asp-validation-for="Product.StockQuantity" class="text-danger small"></span>
+                    <label class="form-label fw-semibold">Stock Quantity</label>
+                    <input class="form-control" value="@Model.Product.StockQuantity" readonly />
+                    <div class="form-text">Inventory quantities are changed by invoices and refunds.</div>
                 </div>
 
-                <!-- Action Buttons -->
+
                 <div class="d-flex justify-content-end gap-2 mt-4">
                     <a asp-page="./Index" class="btn btn-outline-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary px-4">Save Product</button>

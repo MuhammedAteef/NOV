@@ -15,6 +15,11 @@ public class UnitOfWork : IUnitOfWork
     public ISalesInvoiceRepository SalesInvoices { get; }
     public IRepository<PurchaseInvoiceItem> PurchaseInvoiceItems { get; }
     public IRepository<SalesInvoiceItem> SalesInvoiceItems { get; }
+    public IRepository<SalesReturn> SalesReturns { get; }
+    public IRepository<SalesReturnItem> SalesReturnItems { get; }
+    public IRepository<PurchaseRefund> PurchaseRefunds { get; }
+    public IRepository<PurchaseRefundItem> PurchaseRefundItems { get; }
+
     public IRepository<Payment> Payments { get; }
     public IRepository<StockHistory> StockHistories { get; }
 
@@ -29,6 +34,10 @@ public class UnitOfWork : IUnitOfWork
         SalesInvoices = new SalesInvoiceRepository(_context);
         PurchaseInvoiceItems = new Repository<PurchaseInvoiceItem>(_context);
         SalesInvoiceItems = new Repository<SalesInvoiceItem>(_context);
+        SalesReturns = new Repository<SalesReturn>(_context);
+        SalesReturnItems = new Repository<SalesReturnItem>(_context);
+        PurchaseRefunds = new Repository<PurchaseRefund>(_context);
+        PurchaseRefundItems = new Repository<PurchaseRefundItem>(_context);
         Payments = new Repository<Payment>(_context);
         StockHistories = new Repository<StockHistory>(_context);
     }

@@ -9,10 +9,14 @@ namespace SystemManagementSystem.Pages.Account;
 public class LoginModel : PageModel
 {
     private readonly SignInManager<IdentityUser> _signInManager;
+    private readonly UserManager<IdentityUser> _userManager;
 
-    public LoginModel(SignInManager<IdentityUser> signInManager)
+    public LoginModel(
+        SignInManager<IdentityUser> signInManager,
+        UserManager<IdentityUser> userManager)
     {
         _signInManager = signInManager;
+        _userManager = userManager;
     }
 
     [BindProperty]
@@ -22,16 +26,24 @@ public class LoginModel : PageModel
 
     public void OnGet(string? returnUrl = null)
     {
-        ReturnUrl = returnUrl ?? Url.Content("~/Dashboard");
+        ReturnUrl = returnUrl ?? Url.Content("~/");
     }
 
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
-        returnUrl ??= Url.Content("~/Dashboard");
+        returnUrl ??= Url.Content("~/");
 
         if (ModelState.IsValid)
         {
-            var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
+            var user = await _userManager.FindByEmailAsync(Input.Email)
+                ?? await _userManager.FindByNameAsync(Input.Email);
+            var result = user is null
+                ? Microsoft.AspNetCore.Identity.SignInResult.Failed
+                : await _signInManager.PasswordSignInAsync(
+                    user,
+                    Input.Password,
+                    Input.RememberMe,
+                    lockoutOnFailure: true);
 
             if (result.Succeeded)
             {

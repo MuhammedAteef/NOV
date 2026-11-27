@@ -28,4 +28,8 @@
     <Folder Include="Pages\Suppliers\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Tests\**\*.cs" />
+  </ItemGroup>
+
 </Project>

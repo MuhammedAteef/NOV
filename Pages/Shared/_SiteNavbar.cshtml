@@ -1,0 +1,181 @@
+@{
+    var identityName = User.Identity?.Name;
+    var userInitial = string.IsNullOrWhiteSpace(identityName)
+        ? "U"
+        : identityName[..1].ToUpperInvariant();
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var isAdmin = User.IsInRole("Admin");
+}
+
+<header class="site-navbar">
+    <div class="site-navbar-inner">
+        <a class="site-navbar-brand" asp-page="/Index" aria-label="NOVERP home">
+            <span class="logo-brand-icon">
+                <i class="bi bi-layers-fill" aria-hidden="true"></i>
+            </span>
+            <span class="site-navbar-brand-name">NOV</span>
+        </a>
+
+        <nav class="site-navbar-links" aria-label="Main navigation">
+            <a class="site-nav-link" asp-page="/Index" asp-fragment="home">Home</a>
+            <a class="site-nav-link" asp-page="/Index" asp-fragment="about">About</a>
+            <a class="site-nav-link" asp-page="/Index" asp-fragment="contact">Contact Us</a>
+        </nav>
+
+        <div class="site-navbar-actions">
+            @if (isAuthenticated)
+            {
+                <div class="dropdown">
+                    <button
+                        class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold d-flex align-items-center gap-1 dropdown-toggle site-navbar-quick-action"
+                        type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                        <span class="site-navbar-quick-action-label">Quick Action</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded-3 mt-2">
+                        <li>
+                            <a class="dropdown-item py-2 d-flex align-items-center gap-2" asp-page="/SalesInvoices/Create">
+                                <i class="bi bi-bag-plus text-success fs-6" aria-hidden="true"></i>
+                                <span>
+                                    <span class="d-block fw-semibold small">New Sale Invoice</span>
+                                    <small class="text-muted">Create customer invoice</small>
+                                </span>
+                            </a>
+                        </li>
+                        @if (isAdmin)
+                        {
+                            <li>
+                                <a class="dropdown-item py-2 d-flex align-items-center gap-2"
+                                   asp-page="/PurchaseInvoices/Create">
+                                    <i class="bi bi-cart-plus text-primary fs-6" aria-hidden="true"></i>
+                                    <span>
+                                        <span class="d-block fw-semibold small">New Purchase Invoice</span>
+                                        <small class="text-muted">Add inventory stock</small>
+                                    </span>
+                                </a>
+                            </li>
+                        }
+                        <li>
+                            <hr class="dropdown-divider my-1">
+                        </li>
+                        <li>
+                            <a class="dropdown-item py-2 d-flex align-items-center gap-2" asp-page="/Products/Create">
+                                <i class="bi bi-box-seam text-info fs-6" aria-hidden="true"></i>
+                                Add New Product
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item py-2 d-flex align-items-center gap-2" asp-page="/Customers/Create">
+                                <i class="bi bi-person-plus text-warning fs-6" aria-hidden="true"></i>
+                                Add New Customer
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="dropdown">
+                    <button class="btn btn-light btn-sm rounded-circle p-2 position-relative border site-navbar-icon-button"
+                            type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications">
+                        <i class="bi bi-bell fs-6 text-secondary" aria-hidden="true"></i>
+                        <span
+                            class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
+                            <span class="visually-hidden">New notifications</span>
+                        </span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end notification-dropdown-menu mt-2 p-0">
+                        <div
+                            class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light rounded-top">
+                            <h2 class="h6 fw-bold mb-0 text-dark">Notifications</h2>
+                            <span class="badge bg-primary rounded-pill">4 New</span>
+                        </div>
+                        <div class="list-group list-group-flush">
+                            <a href="#" class="notification-item">
+                                <span class="bg-success-subtle text-success p-2 rounded-circle flex-shrink-0">
+                                    <i class="bi bi-bag-check fs-6" aria-hidden="true"></i>
+                                </span>
+                                <span>
+                                    <span class="d-block fw-semibold small">5 New Sales Orders</span>
+                                    <small class="text-muted">Sales department completed orders</small>
+                                </span>
+                            </a>
+                            <a href="#" class="notification-item">
+                                <span class="bg-warning-subtle text-warning p-2 rounded-circle flex-shrink-0">
+                                    <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                                </span>
+                                <span>
+                                    <span class="d-block fw-semibold small">Low Stock Alert (3 Products)</span>
+                                    <small class="text-muted">Stock falls below minimum threshold</small>
+                                </span>
+                            </a>
+                            <a href="#" class="notification-item">
+                                <span class="bg-info-subtle text-info p-2 rounded-circle flex-shrink-0">
+                                    <i class="bi bi-credit-card fs-6" aria-hidden="true"></i>
+                                </span>
+                                <span>
+                                    <span class="d-block fw-semibold small">Stripe Payment Received</span>
+                                    <small class="text-muted">$1,250.00 received from customer</small>
+                                </span>
+                            </a>
+                        </div>
+                        <div class="p-2 text-center border-top bg-light rounded-bottom">
+                            <button class="btn btn-link btn-sm text-primary fw-semibold text-decoration-none p-0"
+                                    type="button">
+                                Mark all as read
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dropdown">
+                    <button
+                        class="btn btn-light btn-sm rounded-pill border px-2 py-1 d-flex align-items-center gap-2 site-navbar-user-button"
+                        type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="User menu">
+                        <span class="site-navbar-user-avatar">@userInitial</span>
+                        <i class="bi bi-chevron-down text-muted small" aria-hidden="true"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded-3 mt-2 p-2 site-navbar-user-menu">
+                        <li>
+                            <a class="dropdown-item rounded-2 d-flex align-items-center gap-2 small"
+                               asp-page="/Profile/Index">
+                                <i class="bi bi-person text-secondary" aria-hidden="true"></i>
+                                My Profile
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item rounded-2 d-flex align-items-center gap-2 small"
+                               asp-page="/Profile/Edit">
+                                <i class="bi bi-gear text-secondary" aria-hidden="true"></i>
+                                Account Settings
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item rounded-2 d-flex align-items-center gap-2 small" asp-page="/Dashboard">
+                                <i class="bi bi-key text-secondary" aria-hidden="true"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider my-1">
+                        </li>
+                        <li>
+                            <form class="d-inline" asp-page="/Account/Logout" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit"
+                                        class="dropdown-item rounded-2 d-flex align-items-center gap-2 small text-danger fw-semibold">
+                                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                                    Sign Out
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            }
+            else
+            {
+                <a class="btn btn-outline-primary btn-sm rounded-pill px-3 site-navbar-login"
+                   asp-page="/Account/Login">Login</a>
+                <a class="btn btn-primary btn-sm rounded-pill px-3 fw-bold" asp-page="/Account/Register">Register</a>
+            }
+        </div>
+    </div>
+</header>

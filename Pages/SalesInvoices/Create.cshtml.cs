@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
+using Stripe;
 using SystemManagementSystem.DTO;
 using SystemManagementSystem.Models;
 using SystemManagementSystem.Repositories;
@@ -13,26 +15,37 @@ public class CreateModel : PageModel
     private readonly IUnitOfWork _unitOfWork;
     private readonly IConfiguration _config;
     private readonly IPaymentService _paymentService;
+    private readonly IInvoiceWorkflowService _invoiceWorkflow;
+    private readonly ILogger<CreateModel> _logger;
 
-    public CreateModel(IUnitOfWork unitOfWork, IConfiguration config, IPaymentService paymentService)
+    public CreateModel(
+        IUnitOfWork unitOfWork,
+        IConfiguration config,
+        IPaymentService paymentService,
+        IInvoiceWorkflowService invoiceWorkflow,
+        ILogger<CreateModel> logger)
     {
         _unitOfWork = unitOfWork;
         _config = config;
         _paymentService = paymentService;
+        _invoiceWorkflow = invoiceWorkflow;
+        _logger = logger;
     }
 
     [BindProperty]
-    public SalesInvoice Invoice { get; set; } = default!;
+    public SalesInvoice Invoice { get; set; } = new();
 
     [BindProperty]
     public List<InvoiceLineItemDTO> LineItems { get; set; } = new();
 
-    // Payment options on creation (Must be Cash or Card)
     [BindProperty]
     public string PaymentMethod { get; set; } = "Cash";
 
     [BindProperty]
     public string? StripePaymentIntentId { get; set; }
+
+    [BindProperty]
+    public string RequestKey { get; set; } = "";
 
     public string StripePublishableKey { get; set; } = "";
     public SelectList CustomerList { get; set; } = default!;
@@ -41,146 +54,101 @@ public class CreateModel : PageModel
 
     public async Task OnGetAsync()
     {
-        StripePublishableKey = _config["Stripe:PublishableKey"] ?? "";
-        var customers = await _unitOfWork.Customers.GetAllAsync();
-        var products = await _unitOfWork.Products.GetAllAsync();
-        CustomerList = new SelectList(customers, "CustomerId", "Name");
-        ProductList = new SelectList(products, "ProductId", "Name");
-
-        ProductListData = products.Select(p => new
-        {
-            value = p.ProductId,
-            text = $"{p.Name} (Stock: {p.StockQuantity}, ${p.SellingPrice:F2})",
-            sellingPrice = p.SellingPrice,
-            stockQuantity = p.StockQuantity
-        }).Cast<object>().ToList();
+        RequestKey = Guid.NewGuid().ToString("N");
+        await LoadPageDataAsync();
     }
 
-    // ── AJAX Handler for creating Stripe PaymentIntent directly from Create page ─────
     public async Task<IActionResult> OnPostCreateIntentAsync()
     {
-        var amountStr = Request.Form["amount"].ToString();
-        if (!decimal.TryParse(amountStr, out decimal amount) || amount <= 0)
-        {
-            return new JsonResult(new { error = "Invalid payment amount." }) { StatusCode = 400 };
-        }
-
         try
         {
-            var (clientSecret, intentId) = await _paymentService.CreateStripePaymentIntentAsync(amount);
+            var total = await CalculateServerTotalAsync();
+            var (clientSecret, intentId) = await _paymentService.CreateStripePaymentIntentAsync(total);
             return new JsonResult(new { clientSecret, intentId });
         }
-        catch (Exception ex)
+        catch (InvalidOperationException exception)
         {
-            return new JsonResult(new { error = ex.Message }) { StatusCode = 400 };
+            return new JsonResult(new { error = exception.Message }) { StatusCode = 400 };
+        }
+        catch (StripeException exception)
+        {
+            _logger.LogError(exception, "Stripe could not authorize a sales invoice payment.");
+            return new JsonResult(new { error = "Card authorization failed. Please try again." })
+            {
+                StatusCode = StatusCodes.Status502BadGateway
+            };
         }
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
+        await LoadPageDataAsync();
+        ModelState.Remove("Invoice.Customer");
+        ModelState.Remove("Invoice.SalesInvoiceItems");
+
+        if (!ModelState.IsValid)
+        {
+            return Page();
+        }
+
+        try
+        {
+            var invoice = await _invoiceWorkflow.CreateSalesInvoiceAsync(
+                Invoice.CustomerId,
+                Invoice.InvoiceDate,
+                LineItems,
+                PaymentMethod,
+                RequestKey,
+                StripePaymentIntentId);
+
+            TempData["SuccessMessage"] = $"Sales Invoice #{invoice.SalesInvoiceId} created and fully paid.";
+            return RedirectToPage("./Show", new { id = invoice.SalesInvoiceId });
+        }
+        catch (InvalidOperationException exception)
+        {
+            ModelState.AddModelError(string.Empty, exception.Message);
+            return Page();
+        }
+        catch (StripeException exception)
+        {
+            _logger.LogError(exception, "Stripe payment processing failed for a sales invoice.");
+            ModelState.AddModelError(string.Empty, "Card payment could not be completed. No invoice was created.");
+            return Page();
+        }
+    }
+
+    private async Task LoadPageDataAsync()
+    {
         StripePublishableKey = _config["Stripe:PublishableKey"] ?? "";
         var customers = await _unitOfWork.Customers.GetAllAsync();
         var products = await _unitOfWork.Products.GetAllAsync();
-        CustomerList = new SelectList(customers, "CustomerId", "Name");
+        CustomerList = new SelectList(customers, "CustomerId", "Name", Invoice.CustomerId);
         ProductList = new SelectList(products, "ProductId", "Name");
-
-        ProductListData = products.Select(p => new
+        ProductListData = products.Select(product => new
         {
-            value = p.ProductId,
-            text = $"{p.Name} (Stock: {p.StockQuantity}, ${p.SellingPrice:F2})",
-            sellingPrice = p.SellingPrice,
-            stockQuantity = p.StockQuantity
+            value = product.ProductId,
+            text = $"{product.Name} (Stock: {product.StockQuantity}, ${product.SellingPrice:F2})",
+            sellingPrice = product.SellingPrice,
+            stockQuantity = product.StockQuantity
         }).Cast<object>().ToList();
+    }
 
-        if (PaymentMethod != "Cash" && PaymentMethod != "Card")
+    private async Task<decimal> CalculateServerTotalAsync()
+    {
+        if (LineItems.Count == 0 || LineItems.Any(line => line.ProductId <= 0 || line.Quantity <= 0))
         {
-            ModelState.AddModelError(string.Empty, "Please select a valid payment method (Cash or Card). Unpaid status is not permitted.");
-            return Page();
+            throw new InvalidOperationException("Select at least one product and enter a positive quantity.");
         }
 
-        if (PaymentMethod == "Card")
+        var productIds = LineItems.Select(line => line.ProductId).Distinct().ToArray();
+        var products = await _unitOfWork.Products.Query()
+            .Where(product => productIds.Contains(product.ProductId))
+            .ToDictionaryAsync(product => product.ProductId);
+        if (products.Count != productIds.Length)
         {
-            var paymentStatus = await _paymentService.PaymentStatusAsync(StripePaymentIntentId);
-            if (paymentStatus != "succeeded")
-            {
-                ModelState.AddModelError("", "Card payment was not completed.");
-                return Page();
-            }
+            throw new InvalidOperationException("One or more selected products do not exist.");
         }
 
-        if (LineItems == null || !LineItems.Any())
-        {
-            ModelState.AddModelError(string.Empty, "Please add at least one product line item.");
-            return Page();
-        }
-
-        // ── Validate Stock Quantity for each requested product line ──
-        foreach (var line in LineItems)
-        {
-            var product = await _unitOfWork.Products.GetByIdAsync(line.ProductId);
-            if (product == null)
-            {
-                ModelState.AddModelError(string.Empty, "Selected product does not exist.");
-                return Page();
-            }
-            if (line.Quantity <= 0)
-            {
-                ModelState.AddModelError(string.Empty, $"Quantity for '{product.Name}' must be greater than 0.");
-                return Page();
-            }
-            if (line.Quantity > product.StockQuantity)
-            {
-                ModelState.AddModelError(string.Empty, $"Cannot sell {line.Quantity} units of '{product.Name}'. Only {product.StockQuantity} units available in stock.");
-                return Page();
-            }
-        }
-
-        Invoice.TotalAmount = LineItems.Sum(line => line.Quantity * line.UnitPrice);
-        Invoice.InvoiceDate = Invoice.InvoiceDate == default ? DateTime.Now : Invoice.InvoiceDate;
-
-        await _unitOfWork.SalesInvoices.AddAsync(Invoice);
-        await _unitOfWork.SaveChangesAsync();
-
-        foreach (var line in LineItems)
-        {
-            var item = new SalesInvoiceItem
-            {
-                SalesInvoiceId = Invoice.SalesInvoiceId,
-                ProductId = line.ProductId,
-                Quantity = line.Quantity,
-                UnitPrice = line.UnitPrice
-            };
-            await _unitOfWork.SalesInvoiceItems.AddAsync(item);
-
-            var stockEntry = new Models.StockHistory
-            {
-                ProductId = line.ProductId,
-                ChangeQuantity = line.Quantity * -1,
-                MovementType = "OUT",
-                MovementDate = DateTime.Now,
-                Notes = $"Sales Invoice #{Invoice.SalesInvoiceId}"
-            };
-            await _unitOfWork.StockHistories.AddAsync(stockEntry);
-
-            var product = await _unitOfWork.Products.GetByIdAsync(line.ProductId);
-            if (product is not null)
-            {
-                product.StockQuantity -= line.Quantity;
-            }
-        }
-
-        // ── Process Payment for Cash or Card selected via PaymentService ──
-        await _paymentService.ProcessInvoicePaymentAsync(
-            salesInvoiceId: Invoice.SalesInvoiceId,
-            purchaseInvoiceId: null,
-            amount: Invoice.TotalAmount,
-            paymentMethod: PaymentMethod,
-            stripePaymentIntentId: StripePaymentIntentId
-        );
-
-        await _unitOfWork.SaveChangesAsync();
-
-        TempData["SuccessMessage"] = $"Sales Invoice #{Invoice.SalesInvoiceId} created successfully.";
-        return RedirectToPage("./Show", new { id = Invoice.SalesInvoiceId });
+        return LineItems.Sum(line => products[line.ProductId].SellingPrice * line.Quantity);
     }
 }

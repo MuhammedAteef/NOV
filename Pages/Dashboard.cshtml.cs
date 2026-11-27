@@ -37,11 +37,31 @@ public class DashboardModel : PageModel
 
         TotalCustomers = await _unitOfWork.Customers.Query().CountAsync();
 
-        TotalSalesInvoices = await _unitOfWork.SalesInvoices.Query().CountAsync();
+        TotalSalesInvoices = await _unitOfWork.SalesInvoices.Query().CountAsync(invoice => !invoice.IsDeleted);
 
         var today = DateTime.Today;
-        RevenueToday = await _unitOfWork.SalesInvoices.Query().Where(s => s.InvoiceDate.Date == today).SumAsync(s => s.TotalAmount);
+        var paidSalesToday = await _unitOfWork.Payments.Query()
+            .Where(payment => payment.Status == "Paid" &&
+                payment.SalesInvoiceId.HasValue &&
+                payment.PaymentDate.Date == today &&
+                payment.SalesInvoice != null &&
+                !payment.SalesInvoice.IsDeleted)
+            .SumAsync(payment => (decimal?)payment.Amount) ?? 0m;
+        var activeSalesInvoiceIds = _unitOfWork.SalesInvoices.Query()
+            .Where(invoice => !invoice.IsDeleted)
+            .Select(invoice => invoice.SalesInvoiceId);
+        var salesRefundsToday = await _unitOfWork.SalesReturns.Query()
+            .Where(salesReturn => salesReturn.Status == ReturnStatus.Completed &&
+                salesReturn.ReturnDate.Date == today &&
+                activeSalesInvoiceIds.Contains(salesReturn.InvoiceId))
+            .SumAsync(salesReturn => (decimal?)salesReturn.TotalAmount) ?? 0m;
+        RevenueToday = paidSalesToday - salesRefundsToday;
 
-        RecentSales = await _unitOfWork.SalesInvoices.Query().Include(x => x.Customer).OrderByDescending(s => s.InvoiceDate).Take(5).ToListAsync();
+        RecentSales = await _unitOfWork.SalesInvoices.Query()
+            .Where(invoice => !invoice.IsDeleted)
+            .Include(invoice => invoice.Customer)
+            .OrderByDescending(invoice => invoice.InvoiceDate)
+            .Take(5)
+            .ToListAsync();
     }
 }

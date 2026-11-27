@@ -1,0 +1,58 @@
+@page
+@model SystemManagementSystem.Pages.Profile.IndexModel
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<div class="container-xl py-3">
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="status">
+            @Model.StatusMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">My Profile</h1>
+            <p class="text-muted mb-0">View and manage your account details.</p>
+        </div>
+        <a class="btn btn-primary rounded-pill px-4" asp-page="/Profile/Edit">
+            <i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit Profile
+        </a>
+    </div>
+
+    <section class="card rounded-4 shadow-sm">
+        <div class="card-body p-4 p-md-5">
+            <div class="d-flex flex-column flex-md-row align-items-center align-items-md-start gap-4">
+                <div class="profile-avatar" role="img" aria-label="Default profile avatar">
+                    <i class="bi bi-person-fill" aria-hidden="true"></i>
+                </div>
+
+                <div class="flex-grow-1 w-100">
+                    <h2 class="h4 fw-bold text-center text-md-start mb-4">@Model.UserName</h2>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4 profile-detail-label">Username</dt>
+                        <dd class="col-sm-8 mb-3">@Model.UserName</dd>
+
+                        <dt class="col-sm-4 profile-detail-label">Email</dt>
+                        <dd class="col-sm-8 mb-3">
+                            <span>@Model.Email</span>
+                            @if (Model.EmailConfirmed)
+                            {
+                                <span class="badge rounded-pill bg-success-subtle text-success ms-2">Verified</span>
+                            }
+                            else
+                            {
+                                <span class="badge rounded-pill bg-warning-subtle text-warning ms-2">
+                                    Verification pending
+                                </span>
+                            }
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>

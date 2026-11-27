@@ -44,12 +44,13 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddRazorPages(options =>
 {
     // Public Pages
-    options.Conventions.AllowAnonymousToPage("/Index");      
+    options.Conventions.AllowAnonymousToPage("/Index");
     options.Conventions.AllowAnonymousToPage("/Account/Login");
     options.Conventions.AllowAnonymousToPage("/Account/Register");
 
     // Dashboard requires authentication
     options.Conventions.AuthorizePage("/Dashboard");
+    options.Conventions.AllowAnonymousToPage("/Profile/ConfirmEmail");
     //options.Conventions.AllowAnonymousToPage("/Account/AccessDenied");
 
     // Admin Only
@@ -65,6 +66,8 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizeFolder("/Customers");
     options.Conventions.AuthorizeFolder("/SalesInvoices");
     options.Conventions.AuthorizeFolder("/SalesInvoiceItems");
+    options.Conventions.AuthorizeFolder("/Profile");
+
 });
 
 builder.Services.AddAuthorization(options =>
@@ -82,14 +85,16 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Register Domain Services
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IInvoiceWorkflowService, InvoiceWorkflowService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
 
-// Seed Roles and Default Users
+// Apply migrations and seed roles plus an optional configured bootstrap administrator.
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
     try
     {
         var context = services.GetRequiredService<SalesManagementSystemContext>();
@@ -103,43 +108,61 @@ using (var scope = app.Services.CreateScope())
         {
             if (!await roleManager.RoleExistsAsync(role))
             {
-                await roleManager.CreateAsync(new IdentityRole(role));
+                var roleResult = await roleManager.CreateAsync(new IdentityRole(role));
+                if (!roleResult.Succeeded)
+                {
+                    throw new InvalidOperationException(
+                        $"Could not create the '{role}' role: {string.Join("; ", roleResult.Errors.Select(error => error.Code))}");
+                }
             }
         }
 
-        // Seed Default Admin User
-        var adminEmail = "admin1@system.com";
-        var adminUser = await userManager.FindByEmailAsync(adminEmail);
-        if (adminUser == null)
+        var adminEmail = builder.Configuration["SeedAdmin:Email"];
+        var adminPassword = builder.Configuration["SeedAdmin:Password"];
+        var adminUserName = builder.Configuration["SeedAdmin:UserName"];
+        if (string.IsNullOrWhiteSpace(adminEmail) != string.IsNullOrWhiteSpace(adminPassword))
         {
-            adminUser = new IdentityUser { UserName = adminEmail, Email = adminEmail, EmailConfirmed = true };
-            var result = await userManager.CreateAsync(adminUser, "Admin1@123");
-            if (result.Succeeded)
-            {
-                await userManager.AddToRoleAsync(adminUser, "Admin");
-            }
+            throw new InvalidOperationException(
+                "Configure both SeedAdmin:Email and SeedAdmin:Password to provision the bootstrap administrator.");
         }
 
-        var standardEmail = "admin2@system.com";
-        var standardAdmin = await userManager.FindByEmailAsync(standardEmail);
-        if (standardAdmin == null)
+        if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPassword))
         {
-            standardAdmin = new IdentityUser { UserName = standardEmail, Email = standardEmail, EmailConfirmed = true };
-            var result = await userManager.CreateAsync(standardAdmin, "Admin2@123");
-            if (result.Succeeded)
+            var adminUser = await userManager.FindByEmailAsync(adminEmail);
+            if (adminUser is null)
             {
-                await userManager.AddToRoleAsync(standardAdmin, "Admin");
+                adminUser = new IdentityUser
+                {
+                    UserName = adminUserName,
+                    Email = adminEmail,
+                    EmailConfirmed = true
+                };
+                var result = await userManager.CreateAsync(adminUser, adminPassword);
+                if (!result.Succeeded)
+                {
+                    throw new InvalidOperationException(
+                        $"Could not create the configured bootstrap administrator: {string.Join("; ", result.Errors.Select(error => error.Code))}");
+                }
+            }
+
+            if (!await userManager.IsInRoleAsync(adminUser, "Admin"))
+            {
+                var roleResult = await userManager.AddToRoleAsync(adminUser, "Admin");
+                if (!roleResult.Succeeded)
+                {
+                    throw new InvalidOperationException(
+                        $"Could not assign the configured bootstrap administrator to the Admin role: {string.Join("; ", roleResult.Errors.Select(error => error.Code))}");
+                }
             }
         }
     }
     catch (Exception ex)
     {
-        var logger = services.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "An error occurred while seeding Identity roles and users.");
+        throw;
     }
 }
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");

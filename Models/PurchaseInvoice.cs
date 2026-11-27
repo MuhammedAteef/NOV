@@ -11,6 +11,7 @@ public partial class PurchaseInvoice
     public decimal TotalAmount { get; set; }
     public decimal PaidAmount { get; set; } = 0;
     public decimal RemainingAmount { get; set; } = 0;
+    public string? RequestKey { get; set; }
 
     public bool IsDeleted { get; set; } = false;
 
@@ -19,4 +20,6 @@ public partial class PurchaseInvoice
     public virtual ICollection<PurchaseInvoiceItem> PurchaseInvoiceItems { get; set; } = new List<PurchaseInvoiceItem>();
 
     public virtual Supplier Supplier { get; set; } = null!;
+
+    public ICollection<PurchaseRefund> Refunds { get; set; } = new List<PurchaseRefund>();
 }

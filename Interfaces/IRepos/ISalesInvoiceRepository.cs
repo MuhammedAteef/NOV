@@ -6,5 +6,4 @@ public interface ISalesInvoiceRepository : IRepository<SalesInvoice>
 {
     Task<List<SalesInvoice>> GetAllWithCustomerAsync();
     Task<SalesInvoice?> GetWithDetailsAsync(int id);
-    Task SoftDeleteAsync(int id);
 }

@@ -5,7 +5,7 @@
 }
 
 <div class="container-fluid px-0">
-    <!-- Header & Action Section -->
+
     <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4 gap-3">
         <div>
             <h3 class="fw-bold text-dark mb-1">Sales Invoices</h3>
@@ -37,7 +37,7 @@
         </div>
     }
 
-    <!-- FILTER & SEARCH CARD -->
+
     <div class="card rounded-4 border-0 shadow-sm mb-4">
         <div class="card-body p-3">
             <form method="get" class="row g-2 align-items-center">
@@ -46,15 +46,15 @@
                         <span class="input-group-text bg-white border-end-0"><i
                             class="bi bi-search text-muted"></i></span>
                             <input type="text" asp-for="SearchTerm" class="form-control border-start-0 ps-0"
-                                   placeholder="Search by Invoice # or Customer..." />
+                                   placeholder="Invoice # or customerName" />
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <select asp-for="CustomerId" asp-items="Model.CustomerList" class="form-select">
                             <option value="">-- All Customers --</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0">
                                 <i class="bi bi-calendar3 text-muted"></i>
@@ -62,7 +62,7 @@
                             <input type="date" asp-for="SelectedDate" class="form-control border-start-0 ps-0" />
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <select asp-for="Status" class="form-select">
                             <option value="">-- All Statuses --</option>
                             <option value="Completed">Completed</option>
@@ -81,7 +81,7 @@
             </div>
         </div>
 
-        <!-- Sales Invoices Table Card (Rounded-4) -->
+
         <div class="card rounded-4 border-0 shadow-sm">
             <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
                 <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-receipt me-2 text-primary"></i>Sales Records</h5>
@@ -120,7 +120,7 @@
                                             <td class="fw-bold text-dark">
                                                 $@invoice.TotalAmount.ToString("N2")
                                             </td>
-                                            <!-- Status column -->
+
                                             <td>
                                                 @if (deleted)
                                                 {
@@ -131,23 +131,36 @@
                                                     <span class="status-badge in-stock">🟢 Completed</span>
                                                 }
                                             </td>
-                                            <!-- Compact Action Icon Buttons -->
+
                                             <td class="text-end pe-4">
                                                 <div class="btn-action-group">
                                                     <a asp-page="Show" asp-route-id="@invoice.SalesInvoiceId"
                                                        class="btn-action btn-action-view" title="View Invoice Receipt">
                                                         <i class="bi bi-eye-fill"></i>
                                                     </a>
+                                                    <a asp-page="Show" asp-route-id="@invoice.SalesInvoiceId"
+                                                       class="btn-action btn-action-view position-relative"
+                                                       title="Refund history"
+                                                       aria-label="Refund history: @invoice.Refunds.Count refunds">
+                                                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                                            @invoice.Refunds.Count
+                                                        </span>
+                                                    </a>
                                                     @if (!deleted)
                                                     {
                                                         <a asp-page="Edit" asp-route-id="@invoice.SalesInvoiceId"
-                                                           class="btn-action btn-action-edit" title="Edit Invoice">
-                                                            <i class="bi bi-pencil-fill"></i>
+                                                           class="btn-action btn-action-edit" title="Make Sales Return">
+                                                            <i class="bi bi-arrow-return-left"></i>
                                                         </a>
-                                                        <a asp-page="Delete" asp-route-id="@invoice.SalesInvoiceId"
-                                                           class="btn-action btn-action-delete" title="Delete Invoice">
-                                                            <i class="bi bi-trash-fill"></i>
-                                                        </a>
+                                                        @if (User.IsInRole("Admin"))
+                                                        {
+                                                            <a asp-page="Delete" asp-route-id="@invoice.SalesInvoiceId"
+                                                               class="btn-action btn-action-delete" title="Delete Invoice"
+                                                               aria-label="Delete sales invoice">
+                                                                <i class="bi bi-trash-fill" aria-hidden="true"></i>
+                                                            </a>
+                                                        }
                                                     }
                                                 </div>
                                             </td>

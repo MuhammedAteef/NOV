@@ -1,0 +1,25 @@
+@page
+@model SystemManagementSystem.Pages.Profile.ConfirmEmailModel
+@{
+    ViewData["Title"] = "Confirm Email";
+}
+
+<div class="container d-flex justify-content-center py-5">
+    <section class="card rounded-4 shadow-sm w-100" style="max-width: 520px;">
+        <div class="card-body p-4 p-md-5 text-center">
+            <i class="bi @(Model.Succeeded ? "bi-envelope-check" : "bi-envelope-exclamation") fs-1 text-primary"
+               aria-hidden="true"></i>
+            <h1 class="h3 fw-bold mt-3">@(Model.Succeeded ? "Email confirmed" : "Email confirmation")</h1>
+            <p class="text-muted mb-4">@Model.StatusMessage</p>
+
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a asp-page="/Profile/Index" class="btn btn-primary rounded-pill px-4">Back to Profile</a>
+            }
+            else
+            {
+                <a asp-page="/Account/Login" class="btn btn-primary rounded-pill px-4">Go to Login</a>
+            }
+        </div>
+    </section>
+</div>

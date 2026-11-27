@@ -1,17 +1,22 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SystemManagementSystem.Models;
 using SystemManagementSystem.Repositories;
+using SystemManagementSystem.Services;
 
 namespace SystemManagementSystem.Pages.PurchaseInvoices;
 
+[Authorize(Policy = "AdminOnly")]
 public class DeleteModel : PageModel
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IInvoiceWorkflowService _invoiceWorkflow;
 
-    public DeleteModel(IUnitOfWork unitOfWork)
+    public DeleteModel(IUnitOfWork unitOfWork, IInvoiceWorkflowService invoiceWorkflow)
     {
         _unitOfWork = unitOfWork;
+        _invoiceWorkflow = invoiceWorkflow;
     }
 
     public PurchaseInvoice Invoice { get; set; } = default!;
@@ -19,30 +24,54 @@ public class DeleteModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(int? id)
     {
-        if (id == null) return NotFound();
+        if (id is null)
+        {
+            return NotFound();
+        }
 
         var invoice = await _unitOfWork.PurchaseInvoices.GetWithDetailsAsync(id.Value);
-        if (invoice is null) return NotFound();
+        if (invoice is null)
+        {
+            return NotFound();
+        }
+
+        if (invoice.IsDeleted)
+        {
+            TempData["ErrorMessage"] = "This purchase invoice has already been deleted.";
+            return RedirectToPage("./Index");
+        }
 
         Invoice = invoice;
-        LineItems = Invoice.PurchaseInvoiceItems.ToList();
+        LineItems = invoice.PurchaseInvoiceItems.ToList();
         return Page();
     }
 
     public async Task<IActionResult> OnPostAsync(int id)
     {
-        var invoice = await _unitOfWork.PurchaseInvoices.GetWithDetailsAsync(id);
-        if (invoice is null) return NotFound();
-
-        if (invoice.IsDeleted)
+        try
         {
-            TempData["ErrorMessage"] = $"Invoice #{id} is already marked as deleted.";
+            await _invoiceWorkflow.SoftDeletePurchaseInvoiceAsync(id);
+            TempData["SuccessMessage"] = $"Purchase invoice #{id} was deleted and its remaining stock was reversed.";
             return RedirectToPage("./Index");
         }
+        catch (InvalidOperationException exception)
+        {
+            var invoice = await _unitOfWork.PurchaseInvoices.GetWithDetailsAsync(id);
+            if (invoice is null)
+            {
+                return NotFound();
+            }
 
-        await _unitOfWork.PurchaseInvoices.SoftDeleteAsync(id);
+            if (invoice.IsDeleted)
+            {
+                TempData["ErrorMessage"] = exception.Message;
+                return RedirectToPage("./Index");
+            }
 
-        TempData["SuccessMessage"] = $"Purchase Invoice #{id} has been deleted and stock has been reversed.";
-        return RedirectToPage("./Index");
+            ModelState.AddModelError(string.Empty, exception.Message);
+            Invoice = invoice;
+            LineItems = invoice.PurchaseInvoiceItems.ToList();
+            return Page();
+        }
     }
 }

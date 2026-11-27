@@ -12,6 +12,10 @@ public interface IUnitOfWork : IDisposable
     ISalesInvoiceRepository SalesInvoices { get; }
     IRepository<PurchaseInvoiceItem> PurchaseInvoiceItems { get; }
     IRepository<SalesInvoiceItem> SalesInvoiceItems { get; }
+    IRepository<SalesReturn> SalesReturns { get; }
+    IRepository<SalesReturnItem> SalesReturnItems { get; }
+    IRepository<PurchaseRefund> PurchaseRefunds { get; }
+    IRepository<PurchaseRefundItem> PurchaseRefundItems { get; }
     IRepository<Payment> Payments { get; }
     IRepository<StockHistory> StockHistories { get; }
     Task<int> SaveChangesAsync();

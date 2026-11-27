@@ -4,7 +4,15 @@ namespace SystemManagementSystem.Services;
 
 public interface IPaymentService
 {
-    Task<(string clientSecret, string intentId)> CreateStripePaymentIntentAsync(decimal amount);
-    Task<Payment> ProcessInvoicePaymentAsync(int? salesInvoiceId, int? purchaseInvoiceId, decimal amount, string paymentMethod, string? stripePaymentIntentId = null);
-    Task<string> PaymentStatusAsync(string stripePaymentIntentId);
+    Task<(string clientSecret, string intentId)> CreateStripePaymentIntentAsync(
+        decimal amount,
+        string? idempotencyKey = null);
+
+    Task<bool> IsStripePaymentIntentReadyAsync(string? paymentIntentId, decimal expectedAmount);
+
+    Task CaptureStripePaymentIntentAsync(string paymentIntentId, decimal expectedAmount);
+
+    Task CancelStripePaymentIntentAsync(string paymentIntentId);
+
+    Task RefundCapturedPaymentIntentAsync(string paymentIntentId);
 }
